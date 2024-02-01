@@ -518,8 +518,11 @@ boolean receiveDataFromSlave() {
   return receiveFramework_srv(receivedFunction, receivedMessage);
 }
 
-
+//
 // FUNZIONI DI UTILITA'
+//
+
+// RIEMPIE DI 0 UNA STRINGA PER FARLA ARRIVARE AD UNA LUNGHEZZA FISSATA
 void padZerosLeft(String &str, int fixedLength) {
   int currentLength = str.length();
   if (currentLength < fixedLength) {
@@ -532,27 +535,23 @@ void padZerosLeft(String &str, int fixedLength) {
   }
 }
 
+// ESTRAZIONE DEI FIELD FUNZIONE IN BASE AL -
 String extractField(String input, char separator, int index) {
   int separatorCount = 0;
   int startIndex = 0;
-
   for (int i = 0; i <= input.length(); i++) {
     if (input[i] == separator || i == input.length()) {
       separatorCount++;
-
       if (separatorCount == index + 1) {
         return input.substring(startIndex, i);
       }
-
       startIndex = i + 1;
     }
   }
-
-  // Se l'indice richiesto è troppo grande o il separatore non è presente, restituisci una stringa vuota
   return "";
 }
 
-// Funzione per convertire un array di byte in una String
+// CONVERSIONE DA ARRAY DI BYTE A STRINGA
 String byteArrayToString(byte* array, int length) {
   String result = "";
   for (int i = 0; i < length; i++) {
@@ -561,7 +560,7 @@ String byteArrayToString(byte* array, int length) {
   return result;
 }
 
-// Funzione per convertire una String in un array di byte
+// CONVERSIONE DA STRINGA AD ARRAY DI BYTE
 void stringToByteArray(String input, byte* output, int maxLength) {
   for (int i = 0; i < maxLength && i < input.length(); i++) {
     output[i] = input.charAt(i);
