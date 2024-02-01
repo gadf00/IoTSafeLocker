@@ -1,11 +1,15 @@
 #include <Wire.h>
 #include "Servo.h"
+#include <dht.h>
 
 Servo doorServo;
 #define servoPin 3
+#define DHT22_pin 2
 
+dht DHT;
 String pswState = "";
 int dimensionePsw = 0;
+int measure;
 
 boolean rstBtn = false;
 
@@ -24,6 +28,16 @@ void setup() {
 
 void loop() {
   // Il loop può contenere eventuali altre operazioni, ma evita di bloccare il programma con ritardi lunghi
+  measure = DHT.read22(DHT22_pin);
+  delay(2000);
+  Serial.print("\nTemperature: ");
+  Serial.print(DHT.temperature);
+  Serial.print("°C");
+  Serial.print("\nHumidity: ");
+  Serial.print(DHT.humidity);
+  Serial.print("%");
+
+  delay(2000);
 }
 
 void receiveData(int byteCount) {
@@ -130,12 +144,12 @@ void receiveFramework_slv(String funzione, String messaggio) {
 }
 
 void openMotor() {
-  doorServo.write(180);
+  doorServo.write(90);
   Serial.println("MOTORE SU APERTO.");
 }
 
 void closeMotor() {
-  doorServo.write(90);
+  doorServo.write(180);
   Serial.println("MOTORE SU CHIUSO.");
 }
 
