@@ -236,6 +236,7 @@ void loop() {
     rstPressedbool = false;
     login = false;
     varControllo1 = false;
+    sendFramework_srv(7, "RST_OK");
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
   delay(250);
@@ -404,8 +405,8 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   // 1 - IMP_CHECK - IMPRONTA
   // 2 - PSW_CHECK - PASSWORD
   // 3 - DOR_CHECK - PORTA
-  // 4 - TMP_CHECK - TEMPERATURA
-  // 5 - UMH_CHECK - UMIDITA'
+  // 4 - TMP_CHECK - TEMPERATURA (NON SERVE PIU SENSORE SPOSTATO SUL REV2)
+  // 5 - UMH_CHECK - UMIDITA' (NON SERVE PIU SENSORE SPOSTATO SUL REV2)
   // 6 - ALM_CHECK - ALLARME SONORO
   // 7 - RST_CHECK - RESET
   // 8 - MOT_OPENC - APRI CHIUDI MOTORE
@@ -416,9 +417,9 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   // 3 - DOR_OP DOR_CL
   // 4 - TEMPERATURE
   // 5 - UMIDITY
-  // 6 - ALM_ON ALM_OF MESSO 
+  // 6 - ALM_ON ALM_OF
   // 7 - RST_OK
-  // 8 - MOT_ON, MOT_OFF MESSO
+  // 8 - MOT_ON, MOT_OFF
   
   Serial.print("Invocato invio al REV2 - Funzione: ")
   Serial.print(nFunction);
