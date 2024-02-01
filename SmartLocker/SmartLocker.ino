@@ -57,6 +57,9 @@ int contDoor = 0;
 // INIZIO PROGRAMMA
 void setup() {
   Wire.begin(); // DICHIARAZIONE I2C
+  Wire.beginTransmission(0);
+  Wire.write(0);
+  Wire.endTransmission();
   Serial.begin(9600); // DICHIARAZIONE SERIALE
   while (!Serial);
   finger.begin(57600); // INIZIALIZZAZIONE LETTORE DI IMPRONTE
@@ -104,12 +107,12 @@ void doorStatusChanged() {
     lastDebounceTime_door_o = currentMillis;
     if(digitalRead(DOOR_PIN) == HIGH) {
       Serial.println("PORTA APERTA");
-      sendFramework_srv(3, "DOR_OP");
+      //sendFramework_srv(3, "DOR_OP");
       doorOpenedbool = true;
     }
     if(digitalRead(DOOR_PIN) == LOW) {
       Serial.println("PORTA CHIUSA");
-      sendFramework_srv(3, "DOR_CL");
+      //sendFramework_srv(3, "DOR_CL");
       doorOpenedbool = false;
     }
   }
@@ -131,8 +134,9 @@ boolean faseLogin() {
     digitalWrite(LED_RED_PIN,LOW);
     digitalWrite(LED_GREEN_PIN,HIGH);
   }
-  while((digitalRead(BTN_GREEN_PIN) == HIGH || (digitalRead(BTN_GREEN_PIN) == LOW && firstWrite)) && !doorOpenedbool) {
-      delay(50);
+  while((digitalRead(BTN_GREEN_PIN) == HIGH) && !doorOpenedbool) {
+    // || (digitalRead(BTN_GREEN_PIN) == LOW && firstWrite && !doorOpenedbool))
+    delay(50);
   }
   firstWrite = false;
   if(rstPressedbool) {
@@ -191,6 +195,7 @@ void loop() {
     Serial.println("Login Fallita.");
   }
   if(!login && doorOpenedbool) {
+    comunicaPorta();
     allarmeInfinito();
   }
   if(login && !rstPressedbool) {
@@ -201,11 +206,15 @@ void loop() {
       digitalWrite(LED_RED_PIN, LOW);
       digitalWrite(LED_GREEN_PIN, HIGH); 
       lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print(" PREGO APRIRE ");
       lcd.setCursor(0,1);
-      lcd.print(" PORTA ");     
+      lcd.print("    PREGO APRIRE    ");
+      lcd.setCursor(0,2);
+      lcd.print("       PORTA.       ");     
       sendFramework_srv(8, "MOT_ON");
+      while(!doorOpenedbool){
+        delay(50);
+      }
+      comunicaPorta();
     }
     varControllo1 = true;
   }
@@ -216,9 +225,11 @@ void loop() {
       // FINCHE' NON VERRA CHIUSA CI SARA' UN ALLARME PIU' TENUE 
       lcd.clear();
       lcd.setCursor(0,0);
-      lcd.print(" PORCODIO ");
+      lcd.print("   ATTENZIONE!!!!   ");
+      lcd.setCursor(0,1);
+      lcd.print(" CHIUDERE LA PORTA! ");
       lcd.setCursor(0,2);
-      lcd.print(" CHIUDI LA PORTA VA LA ");
+      lcd.print("   PER CONCLUDERE   ");
       while(doorOpenedbool) {
         tonoBreve();
         delay(50);
@@ -229,6 +240,7 @@ void loop() {
     // SE VIENE PREMUTO IL BOTTONE DI RESET E LA PORTA E' CHIUSA
     // CHIUDIAMO IL SERVO CHE BLOCCA LA PORTA
     sendFramework_srv(8, "MOT_OF");
+    comunicaPorta();
     // RESET DI IMPRONTA E PASSWORD INSERITE E TUTTE LE VARIABILI DI CONTROLLO
     // NON RESETTIAMO I TENTATIVI PER EVITARE TENTATIVI INFINITI
     impOk = false;
@@ -240,6 +252,18 @@ void loop() {
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
   delay(250);
+}
+
+//COMUNICAZIONE PORTA APERTA/CHIUSA
+void comunicaPorta() {
+  if(doorOpenedbool) {
+    //COMUNICARE PORTA APERTA
+    sendFramework_srv(3, "DOR_OP");
+  }
+  else {
+    //COMUNICARE PORTA CHIUSA
+    sendFramework_srv(3, "DOR_CL");
+  }
 }
 
 // ALLARME FORTE
@@ -278,6 +302,13 @@ void allarmeTentativiEsauriti() {
     noTone(BUZZER_PIN);
     delay(250);
   }
+}
+
+void tonoBreve() {
+  tone(BUZZER_PIN, 1300, 250);
+  delay(250);
+  noTone(BUZZER_PIN);
+  delay(250);
 }
 
 // CHECK DELLA PASSWORD 
@@ -332,7 +363,7 @@ boolean checkPsw(){
     lcd.print(" tentativi.");
     if(tentativiPsw == 0) {
       Serial.println("Tentativi massimi raggiunti, attivo allarme;");
-      allarmeTentativiEseuriti();
+      allarmeTentativiEsauriti();
       return false;
     }
     delay(2000);
@@ -390,7 +421,7 @@ boolean checkImp() {
         sendFramework_srv(1,"IMP_ER");
         if (tentativiImp == 0) {
           Serial.println("Tentativi massimi raggiunti, attivo allarme;");
-          allarmeTentativiEseuriti();
+          allarmeTentativiEsauriti();
           return false;
         }
       }
@@ -421,7 +452,7 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   // 7 - RST_OK
   // 8 - MOT_ON, MOT_OFF
   
-  Serial.print("Invocato invio al REV2 - Funzione: ")
+  Serial.print("Invocato invio al REV2 - Funzione: ");
   Serial.print(nFunction);
   Serial.print(";   Messaggio: ");
   Serial.print(dataMessage);

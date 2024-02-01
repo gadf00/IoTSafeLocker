@@ -37,6 +37,7 @@ void loop() {
   Serial.print(DHT.humidity);
   Serial.print("%");
 
+
   delay(2000);
 }
 
