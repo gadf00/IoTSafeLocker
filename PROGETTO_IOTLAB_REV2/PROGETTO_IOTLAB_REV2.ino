@@ -34,22 +34,21 @@ String statoImp = "ATTESA";
 String statoPsw = "ATTESA";
 String statoDoor = "CHIUSA";
 String statoAlarm = "CICALINO NON IN AZIONE";
-
+String controlPsw = "";
 String receivedFunction;
 String receivedMessage;
+boolean invia = false;
 
 void setup() {
   Wire.begin(8);                // Inizializza la comunicazione I2C e assegna l'indirizzo 8
-  
-  Wire.beginTransmission(0);
-  Wire.write(0);
-  Wire.endTransmission();
+
 
   Wire.onReceive(receiveData);  // Definisce la funzione callback per gestire la ricezione dal master
   Wire.onRequest(sendData); // Funzione callback per inviare al master
   Serial.begin(9600);
   connectToWiFi();
   client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
   connectToMQTT();  // Muovi la connessione MQTT nel setup
   dht.begin();
   doorServo.attach(servoPin);
@@ -80,6 +79,7 @@ void connectToMQTT() {
 
     if (client.connected()) {
       Serial.println(" Connesso al server MQTT");
+      client.subscribe("secureBox_pswResult");
     } else {
       Serial.println(" Connessione MQTT fallita");
     }
@@ -96,13 +96,13 @@ void loop() {
     Serial.println("Errore nella lettura del sensore DHT!");
   } else {
     // Stampa i dati sulla seriale
-    Serial.print("Temperatura: ");
-    Serial.print(temperature);
-    Serial.println(" °C");
+    //Serial.print("Temperatura: ");
+    //Serial.print(temperature);
+    //Serial.println(" °C");
 
-    Serial.print("Umidità: ");
-    Serial.print(humidity);
-    Serial.println(" %");
+    //Serial.print("Umidità: ");
+    //Serial.print(humidity);
+    //Serial.println(" %");
 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
@@ -116,22 +116,22 @@ void loop() {
   connectToMQTT();
   client.loop();  // Mantieni la connessione MQTT aperta
 
-
-  delay(2000);
+  delay(500);
 }
 
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
   connectToMQTT();
   client.publish(mqttTopic.c_str(), value.c_str());
-  Serial.print("Inviato MQTT: ");
-  Serial.print(mqttTopic);
-  Serial.print("   Topic: ");
-  Serial.print(value);
-  Serial.println(";");
+  //Serial.print("Inviato MQTT: ");
+  //Serial.print(mqttTopic);
+  //Serial.print("   Topic: ");
+  //Serial.print(value);
+  //Serial.println(";");
   // Non disconnettere qui
   //client.disconnect();
   delay(500);
 }
+
 
 void receiveData(int byteCount) {
   int dimData = 16;
@@ -157,15 +157,11 @@ void receiveData(int byteCount) {
 }
 
 void sendData() {
-  if (receivedFunction.equals("PSW_CHECK")) {
-    String response = String("PSW_CHECK-") + String(pswState);
-    byte byteResponse[16];
-    stringToByteArray(response, byteResponse, sizeof(byteResponse));
-    Wire.write(byteResponse, sizeof(byteResponse));
-    Serial.println("MESSAGGIO INVIATO AL SERVER");
-    delay(500);
-  }
-  else Serial.println("FUNZIONE NON SUPPORTATA");
+  String response = String("PSW_CHECK-") + String(pswState);
+  byte byteResponse[16];
+  stringToByteArray(response, byteResponse, sizeof(byteResponse));
+  Wire.write(byteResponse, sizeof(byteResponse));
+  Serial.println("MESSAGGIO INVIATO AL SERVER");
 }
 
 void receiveFramework_slv(String funzione, String messaggio) {
@@ -188,7 +184,7 @@ void receiveFramework_slv(String funzione, String messaggio) {
   // 6 - ALM_ON ALM_OF
   // 7 - RST_OK
   // 8 - MOT_ON, MOT_OF
-  /*if(funzione.equals("IMP_CHECK")) {
+  if(funzione.equals("IMP_CHECK")) {
     if(messaggio.equals("IMP_OK")) {
       statoImp = "RICONOSCIUTA";
     }
@@ -197,7 +193,7 @@ void receiveFramework_slv(String funzione, String messaggio) {
     }
   }
   if(funzione == "PSW_CHECK") {
-    checkPassword(messaggio);
+    statoPsw = messaggio;
   }
   if(funzione == "PSW_DIMEN") {
     dimensionePsw = messaggio.toInt();
@@ -240,7 +236,7 @@ void receiveFramework_slv(String funzione, String messaggio) {
     if(messaggio == "MOT_OF") {
       closeMotor();
     }
-  }*/
+  }
 }
 
 void openMotor() {
@@ -253,18 +249,6 @@ void closeMotor() {
   Serial.println("MOTORE SU CHIUSO.");
 }
 
-void checkPassword(String psw) {
-  if(psw == "123AB") {
-    pswState = "PSW_OK";
-    Serial.println("La Password Corrisponde");
-    statoPsw = "PASSWORD RICONOSCIUTA";
-  }
-  else {
-    pswState = "PSW_ER";
-    Serial.println("La Password non Corrisponde");
-    statoPsw = "PASSWORD NON RICONOSCIUTA";
-  }
-}
 
 // Funzione per estrarre un campo da una stringa
 String extractField(String input, char separator, int index) {
@@ -300,4 +284,17 @@ void stringToByteArray(String input, byte* output, int maxLength) {
   for (int i = 0; i < maxLength && i < input.length(); i++) {
     output[i] = input.charAt(i);
   }
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  
+  controlPsw = "";
+  for (int i = 0; i < length; i++) {
+    controlPsw += (char)payload[i];
+  }
+  pswState = controlPsw;
+  Serial.println(controlPsw);
 }

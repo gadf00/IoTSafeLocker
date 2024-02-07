@@ -40,6 +40,7 @@ bool firstWrite = true;
 bool impOk = false;
 bool pswOk = false;
 bool login = false;
+bool pswRicevuta = false;
 // String doorCheck = "";
 // String tempCheck = "";
 // String umiCheck = "";
@@ -57,9 +58,6 @@ int contDoor = 0;
 // INIZIO PROGRAMMA
 void setup() {
   Wire.begin(); // DICHIARAZIONE I2C
-  Wire.beginTransmission(0);
-  Wire.write(0);
-  Wire.endTransmission();
   Serial.begin(9600); // DICHIARAZIONE SERIALE
   while (!Serial);
   finger.begin(57600); // INIZIALIZZAZIONE LETTORE DI IMPRONTE
@@ -211,7 +209,7 @@ void loop() {
       lcd.setCursor(0,2);
       lcd.print("       PORTA.       ");     
       sendFramework_srv(8, "MOT_ON");
-      while(!doorOpenedbool){
+      while(!doorOpenedbool && !rstPressedbool){
         delay(50);
       }
       comunicaPorta();
@@ -234,6 +232,7 @@ void loop() {
         tonoBreve();
         delay(50);
       }
+      comunicaPorta();
     }
   }
   if (rstPressedbool && !doorOpenedbool) {
@@ -248,6 +247,7 @@ void loop() {
     rstPressedbool = false;
     login = false;
     varControllo1 = false;
+    pswRicevuta = false;
     sendFramework_srv(7, "RST_OK");
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
@@ -340,10 +340,15 @@ boolean checkPsw(){
   Serial.println(entered_code);
   // INVIO AL REV2 PER IL CONTROLLO
   sendFramework_srv(2, entered_code);
-  delay(250);
-  // RICECO LA RISPOSTA DAL REV2
-  pswOk = receiveDataFromSlave();
-  delay(250);
+
+  // RICEVO LA RISPOSTA DAL REV2
+  Serial.println("Inizio attesa password;");
+  while(!pswRicevuta) {
+    Serial.print("- ");
+    pswOk = receiveDataFromSlave();
+    delay(2000);
+  }
+  Serial.println(" OK");
   if(pswOk) {
     Serial.println("La Password Corrisponde;");
     tentativiPsw = 5;
@@ -470,7 +475,6 @@ void sendFramework_srv(int nFunction, String dataMessage) {
     String msgFin1 = String("PSW_DIMEN") + "-" + dimString;
     String msgFin2 = String("PSW_CHECK") + "-" + dataMessage;
     performSend(msgFin1, msgFin1.length());
-    delay(500);
     performSend(msgFin2, msgFin2.length());
   }
   else if(nFunction == 3) {
@@ -519,13 +523,20 @@ boolean receiveFramework_srv(String function, String dataMessage) {
   // QUESTO FRAMEWORK RITORNA SOLAMENTE TRUE O FALSE
   if(function == "PSW_CHECK") {
     if(dataMessage == "PSW_OK") {
+      pswRicevuta = true;
       return true;
     }
     else if(dataMessage == "PSW_ER") {
+      pswRicevuta = true;
+      return false;
+    }
+    else if(dataMessage == "PSW_AT"){
+      pswRicevuta = false;
       return false;
     }
   }
   else {
+    pswRicevuta = false;
     return false;
   }
 }
