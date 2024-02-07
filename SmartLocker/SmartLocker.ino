@@ -343,12 +343,22 @@ boolean checkPsw(){
 
   // RICEVO LA RISPOSTA DAL REV2
   Serial.print("Inizio attesa password:");
-  for(int i = 0; i < 3; i++){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(" CONTROLLO PASSWORD ");
+  lcd.setCursor(0,1);
+  lcd.print("      IN CORSO      ");
+  lcd.setCursor(4,2);
+  for(int i = 0; i < 5; i++){
     Serial.print(" -");
+    lcd.print(" -");
     delay(1000);
   }
   pswOk = receiveDataFromSlave();
   Serial.println("Attesa Finita;");
+  lcd.setCursor(0,3);
+  lcd.print("  ATTESA  CONCLUSA  ");
+  delay(1000);
   if(pswOk) {
     Serial.println("La Password Corrisponde;");
     tentativiPsw = 5;
