@@ -136,7 +136,7 @@ void loop() {
 }
 
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
-  //connectToMQTT();
+  connectToMQTT();
   client.publish(mqttTopic.c_str(), value.c_str());
   //Serial.print("Inviato MQTT: ");
   //Serial.print(mqttTopic);
