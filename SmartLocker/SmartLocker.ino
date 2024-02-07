@@ -342,13 +342,18 @@ boolean checkPsw(){
   sendFramework_srv(2, entered_code);
 
   // RICEVO LA RISPOSTA DAL REV2
-  Serial.println("Inizio attesa password;");
-  while(!pswRicevuta) {
-    Serial.print("- ");
-    pswOk = receiveDataFromSlave();
-    delay(2000);
+  Serial.print("Inizio attesa password:");
+  for(int i = 0; i < 3; i++){
+    Serial.print(" -");
+    delay(1000);
   }
-  Serial.println(" OK");
+  //while(!pswRicevuta) {
+    //Serial.print("-");
+    //pswOk = receiveDataFromSlave();
+    //delay(2000);
+  //}
+  pswOk = receiveDataFromSlave();
+  Serial.println("Attesa Finita;");
   if(pswOk) {
     Serial.println("La Password Corrisponde;");
     tentativiPsw = 5;
