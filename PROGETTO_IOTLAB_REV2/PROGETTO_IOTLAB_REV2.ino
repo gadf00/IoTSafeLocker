@@ -83,6 +83,7 @@ void connectToMQTT() {
       Serial.println("");
       Serial.println("Connesso al server MQTT.");
       client.subscribe("secureBox_pswResult");
+      client.subscribe("secureBox_resetAdmin");
     } else {
       Serial.println("Connessione MQTT fallita.");
     }
@@ -91,11 +92,6 @@ void connectToMQTT() {
 
 // DICHIARAZIONE FUNZIONE DI CALLBACK MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
-  if(firstStrike) {
-    firstStrike = false;
-    Serial.println("Messaggio dal Broker MQTT ignorato perchè siamo in avvio.");
-    return;
-  }
   Serial.print("Messaggio dal Broker MQTT [");
   Serial.print(topic);
   Serial.print("] ");
@@ -103,8 +99,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
   for (int i = 0; i < length; i++) {
     msgRicevuto += (char)payload[i];
   }
-  pswState = msgRicevuto;
   Serial.println(msgRicevuto);
+  if(firstStrike) {
+    firstStrike = false;
+    Serial.println("Messaggio dal Broker MQTT ignorato perchè siamo in avvio.");
+    return;
+  }
+  if(strcmp(topic, "secureBox_pswResult")) {
+    pswState = msgRicevuto;
+  }
+  if(strcmp(topic, "secureBox_resetAdmin")) {
+    Serial.println("INVOCATO RESET DELL'ADMIN !!!!!!!!!");
+  }
 }
 
 // LOOP DEL SISTEMA
