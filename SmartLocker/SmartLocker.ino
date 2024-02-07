@@ -614,19 +614,21 @@ boolean receiveDataFromSlave(String func) {
   Serial.print("; Messaggio dallo Slave: ");
   Serial.print(receivedMessage);
   Serial.println(";");
-  if(strcmp(func.c_str(), "ADMIN")) == 0 {
+  if(strcmp(func.c_str(), "ADMIN") == 0) {
     if(strcmp(receivedFunction.c_str(), "ADM_RESET") == 0) {
       return receiveFramework_srv(receivedFunction, receivedMessage);
     }
     else return false;
   }
-  else if(strcmp(func.c_str(), "PASSWORD")) == 0 {
+  else if(strcmp(func.c_str(), "PASSWORD") == 0) {
     if(strcmp(receivedFunction.c_str(), "PSW_CHECK") == 0) {
       return receiveFramework_srv(receivedFunction, receivedMessage);
     }
     else return false;
+  }
   else return false;
 }
+
 
 //
 // FUNZIONI DI UTILITA'

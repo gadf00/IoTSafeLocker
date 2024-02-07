@@ -28,7 +28,7 @@ DHT dht(DHT22_PIN, DHT22);
 String pswState = "";
 int dimensionePsw = 0;
 int measure;
-bool firstStrike = true;
+bool firstStrike = true; 
 
 // DICHIARAZIONE VARIABILI NODERED
 String statoImp = "ATTESA";
@@ -44,6 +44,8 @@ String prec_statoAlarm = "";
 String controlPsw = "";
 String receivedFunction;
 String receivedMessage;
+
+String admResetState = "RST_NO";
 
 // SETUP DELL'ARDUINO
 void setup() {
@@ -116,6 +118,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   if(strcmp(topic, "secureBox_resetAdmin") == 0) {
     Serial.println("INVOCATO RESET DELL'ADMIN !!!!!!!!!");
+    admResetState = "RST_OK";  
   }
 }
 
@@ -196,7 +199,14 @@ void receiveData(int byteCount) {
 
 // INVIA DATI I2C
 void sendData() {
-  String response = String("PSW_CHECK-") + String(pswState);
+  String response = "";
+  if(strcmp(receivedFunction.c_str(), "PSW_CHECK") == 0) {
+    response = String("PSW_CHECK-") + String(pswState);
+  }
+  else if(strcmp(receivedFunction.c_str(), "ADM_RESET") == 0) {
+    response = String("ADM_RESET-") + String(admResetState);
+    admResetState = "RST_NO";
+  }
   byte byteResponse[16];
   stringToByteArray(response, byteResponse, sizeof(byteResponse));
   Wire.write(byteResponse, sizeof(byteResponse));
