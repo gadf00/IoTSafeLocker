@@ -30,10 +30,12 @@ int dimensionePsw = 0;
 int measure;
 boolean rstBtn = false;
 
+// DICHIARAZIONE VARIABILI NODERED
 String statoImp = "ATTESA";
 String statoPsw = "ATTESA";
 String statoDoor = "CHIUSA";
 String statoAlarm = "CICALINO NON IN AZIONE";
+
 String controlPsw = "";
 String receivedFunction;
 String receivedMessage;
