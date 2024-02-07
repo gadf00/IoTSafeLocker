@@ -132,20 +132,17 @@ void loop() {
   // Aggiungi la gestione della connessione MQTT qui
   // connectToMQTT();
   client.loop();  // Mantieni la connessione MQTT aperta
-  delay(1000);
+  delay(2000);
 }
 
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
-  connectToMQTT();
-  client.publish(mqttTopic.c_str(), value.c_str());
-  //Serial.print("Inviato MQTT: ");
-  //Serial.print(mqttTopic);
-  //Serial.print("   Topic: ");
-  //Serial.print(value);
-  //Serial.println(";");
-  //Non disconnettere qui
-  //client.disconnect();
-  delay(500);
+  if (client.connected()) {
+    client.publish(mqttTopic.c_str(), value.c_str());
+    delay(500);
+  } else {
+    Serial.println("Connessione MQTT non attiva. Tentativo di riconnessione...");
+    connectToMQTT(); // Se la connessione non è attiva, prova a riconnetterti
+  }
 }
 
 // RICEVI DATI I2C
