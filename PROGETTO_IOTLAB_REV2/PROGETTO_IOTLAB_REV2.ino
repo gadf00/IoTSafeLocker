@@ -106,6 +106,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     return;
   }
   if(strcmp(topic, "secureBox_pswResult")) {
+    Serial.println("pswState aggiornato;");
     pswState = msgRicevuto;
   }
   if(strcmp(topic, "secureBox_resetAdmin")) {
