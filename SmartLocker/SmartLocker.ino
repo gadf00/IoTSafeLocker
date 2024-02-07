@@ -525,7 +525,7 @@ boolean receiveFramework_srv(String function, String dataMessage) {
     if(strcmp(dataMessage.c_str(), "PSW_OK") == 0) {
       return true;
     }
-    else if(strcpm(dataMessage.c_str(), "PSW_ER") == 0) {
+    else if(strcmp(dataMessage.c_str(), "PSW_ER") == 0) {
       return false;
     }
     else {
