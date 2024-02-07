@@ -471,6 +471,8 @@ boolean checkImp() {
         lcd.setCursor(0,2);
         lcd.print("  Impronta Trovata  ");
         lcd.setCursor(0,3);
+        lcd.print("                    ");
+        lcd.setCursor(0,3);
         lcd.print("       ID: ");
         lcd.print(finger.fingerID);
         delay(1500);
