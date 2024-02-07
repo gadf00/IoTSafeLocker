@@ -28,7 +28,7 @@ DHT dht(DHT22_PIN, DHT22);
 String pswState = "";
 int dimensionePsw = 0;
 int measure;
-// boolean rstBtn = false;
+bool firstStrike = true;
 
 // DICHIARAZIONE VARIABILI NODERED
 String statoImp = "ATTESA";
@@ -91,6 +91,11 @@ void connectToMQTT() {
 
 // DICHIARAZIONE FUNZIONE DI CALLBACK MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
+  if(firstStrike) {
+    firstStrike = false;
+    Serial.println("Messaggio dal Broker MQTT ignorato perchè siamo in avvio.");
+    return;
+  }
   Serial.print("Messaggio dal Broker MQTT [");
   Serial.print(topic);
   Serial.print("] ");
