@@ -34,7 +34,7 @@ bool firstStrike = true;
 String statoImp = "ATTESA";
 String statoPsw = "ATTESA";
 String statoDoor = "CHIUSA";
-String statoAlarm = "CICALINO NON IN AZIONE";
+String statoAlarm = "ALLARME SPENTO";
 
 String prec_statoImp = "";
 String prec_statoPsw = "";
@@ -118,7 +118,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   if(strcmp(topic, "secureBox_resetAdmin") == 0) {
     Serial.println("INVOCATO RESET DELL'ADMIN !!!!!!!!!");
-    admResetState = "RST_OK";  
+    admResetState = "RST_OK"; 
   }
 }
 
@@ -129,14 +129,6 @@ void loop() {
   if (isnan(temperature) || isnan(humidity)) { // SE SENSORE DA ERRORE
     Serial.println("Errore nella lettura del sensore DHT!");
   } else { // SE SENSORE NON DA ERRORE 
-    //Stampa i dati sulla seriale
-    //Serial.print("Temperatura: ");
-    //Serial.print(temperature);
-    //Serial.print(" °C   // ");
-    //Serial.print("Umidità: ");
-    //Serial.print(humidity);
-    //Serial.println(" %");
-
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
     if(statoImp != prec_statoImp) {
@@ -189,6 +181,7 @@ void receiveData(int byteCount) {
   Serial.print("Funzione: ");
   Serial.print(receivedFunction);
   Serial.print("   Msg: ");
+
   Serial.println(receivedMessage);
   if (dimensionePsw > 0) {
     dimensionePsw = 0;
@@ -203,9 +196,12 @@ void sendData() {
   if(strcmp(receivedFunction.c_str(), "PSW_CHECK") == 0) {
     response = String("PSW_CHECK-") + String(pswState);
   }
-  else if(strcmp(receivedFunction.c_str(), "ADM_RESET") == 0) {
-    response = String("ADM_RESET-") + String(admResetState);
-    admResetState = "RST_NO";
+  else if(strcmp(receivedFunction.c_str(), "ALM_CHECK") == 0) {
+    if(strcmp(receivedMessage.c_str(), "ALM_ON") == 0) {
+      response = String("ADM_RESET-") + String(admResetState);
+      admResetState = "RST_NO";
+      resetSituation();
+    }
   }
   byte byteResponse[16];
   stringToByteArray(response, byteResponse, sizeof(byteResponse));
@@ -259,12 +255,12 @@ void receiveFramework_slv(String funzione, String messaggio) {
   }
   if(funzione == "ALM_CHECK") {
     if(messaggio == "ALM_ON") {
-      statoAlarm = "CICALINO IN AZIONE";
+      statoAlarm = "ALLARME IN CORSO";
       //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
 
     }
     if(messaggio == "ALM_OF") {
-      statoAlarm = "CICALINO NON IN AZIONE";
+      statoAlarm = "ALLARME SPENTO";
       //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
     }
   }
@@ -287,7 +283,8 @@ void resetSituation() {
   statoImp = "ATTESA";
   statoPsw = "ATTESA";
   statoDoor = "CHIUSA";
-  statoAlarm = "CICALINO NON IN AZIONE";
+  statoAlarm = "ALLARME SPENTO";
+  admResetState = "RST_NO";
   pswState = "";
   //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
   //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
