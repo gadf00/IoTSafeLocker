@@ -41,6 +41,7 @@ bool impOk = false;
 bool pswOk = false;
 bool login = false;
 bool pswRicevuta = false;
+bool adminReset_bool = false;
 // String doorCheck = "";
 // String tempCheck = "";
 // String umiCheck = "";
@@ -251,6 +252,30 @@ void loop() {
     sendFramework_srv(7, "RST_OK");
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
+  if(adminReset_bool) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("   ATTENZIONE!!!!   ");
+    lcd.setCursor(0,1);
+    lcd.print(" CHIUDERE LA PORTA! ");
+    lcd.setCursor(0,2);
+    lcd.print("   PER CONCLUDERE   ");
+    while(doorOpenedbool) {
+      tonoBreve();
+      delay(50);
+    }
+    comunicaPorta();
+    sendFramework_srv(8, "MOT_OF");
+    impOk = false;
+    pswOk = false;
+    rstPressedbool = false;
+    login = false;
+    varControllo1 = false;
+    pswRicevuta = false;
+    adminReset_bool = false;
+    sendFramework_srv(7, "RST_OK");
+    Serial.println("RESET ADMIN AVVENUTO, TUTTE LE VARIABILI RESETTATE.");
+  }
   delay(250);
 }
 
@@ -271,7 +296,7 @@ void allarmeInfinito() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true) {
+  while(true && !adminReset()) {
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
@@ -290,7 +315,7 @@ void allarmeTentativiEsauriti() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true) {
+  while(true && !adminReset()) {
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
@@ -302,6 +327,23 @@ void allarmeTentativiEsauriti() {
     noTone(BUZZER_PIN);
     delay(250);
   }
+}
+
+boolean adminReset() {
+  bool tempOk = receiveDataFromSlave("ADMIN");
+  if(tempOk) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("RICEVUTO");
+    lcd.setCursor(0,1);
+    lcd.print("RESET");
+    lcd.setCursor(0,2);
+    lcd.print("AMMINISTRATORE");
+    adminReset_bool = true;
+    delay(1000);
+  }
+  delay(1000);
+  return tempOk;
 }
 
 void tonoBreve() {
@@ -354,7 +396,7 @@ boolean checkPsw(){
     lcd.print(" -");
     delay(1000);
   }
-  pswOk = receiveDataFromSlave();
+  pswOk = receiveDataFromSlave("PASSWORD");
   Serial.println("Attesa Finita;");
   lcd.setCursor(0,3);
   lcd.print("  ATTESA  CONCLUSA  ");
@@ -542,13 +584,21 @@ boolean receiveFramework_srv(String function, String dataMessage) {
       return false;
     }
   }
+  else if(function == "ADM_RESET") {
+    if(strcmp(dataMessage.c_str(), "RST_OK") == 0) {
+      return true;
+    }
+    else if(strcmp(dataMessage.c_str(), "RST_NO") == 0) {
+      return false;
+    }
+  }
   else {
     return false;
   }
 }
 
 // ATTO DI RICEZIONE DAL REV2
-boolean receiveDataFromSlave() {
+boolean receiveDataFromSlave(String func) {
   // RITORNA TRUE O FALSE IN BASE AL RITORNO DEL FRAMEWORK
   Wire.requestFrom(8, 16);
   byte receivedData[16];
@@ -564,7 +614,18 @@ boolean receiveDataFromSlave() {
   Serial.print("; Messaggio dallo Slave: ");
   Serial.print(receivedMessage);
   Serial.println(";");
-  return receiveFramework_srv(receivedFunction, receivedMessage);
+  if(strcmp(func.c_str(), "ADMIN")) == 0 {
+    if(strcmp(receivedFunction.c_str(), "ADM_RESET") == 0) {
+      return receiveFramework_srv(receivedFunction, receivedMessage);
+    }
+    else return false;
+  }
+  else if(strcmp(func.c_str(), "PASSWORD")) == 0 {
+    if(strcmp(receivedFunction.c_str(), "PSW_CHECK") == 0) {
+      return receiveFramework_srv(receivedFunction, receivedMessage);
+    }
+    else return false;
+  else return false;
 }
 
 //
