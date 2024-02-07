@@ -124,7 +124,7 @@ void loop() {
 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
-    // inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+    inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     // inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
     // inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     // inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
@@ -199,11 +199,11 @@ void receiveFramework_slv(String funzione, String messaggio) {
   if(funzione.equals("IMP_CHECK")) {
     if(messaggio.equals("IMP_OK")) {
       statoImp = "RICONOSCIUTA";
-      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+      //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
     else if (messaggio.equals("IMP_ER")) {
       statoImp = "NON RICONOSCIUTA";
-      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+      //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
   }
   if(funzione == "PSW_CHECK") {
