@@ -140,7 +140,7 @@ void loop() {
       inviaMQTT_NodeRed("secureBox_impronta", statoImp);
       prec_statoImp = statoImp;
     }
-    if(statoPsw != prec_statoPsw) {
+    if(statoPsw != prec_statoPsw) {
       inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
       prec_statoPsw = statoPsw;
     }
@@ -278,6 +278,7 @@ void resetSituation() {
   statoPsw = "ATTESA";
   statoDoor = "CHIUSA";
   statoAlarm = "CICALINO NON IN AZIONE";
+  pswState = "";
   //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
   //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
   //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
