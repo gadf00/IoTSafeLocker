@@ -28,7 +28,7 @@ DHT dht(DHT22_PIN, DHT22);
 String pswState = "";
 int dimensionePsw = 0;
 int measure;
-boolean rstBtn = false;
+// boolean rstBtn = false;
 
 // DICHIARAZIONE VARIABILI NODERED
 String statoImp = "ATTESA";
@@ -39,7 +39,6 @@ String statoAlarm = "CICALINO NON IN AZIONE";
 String controlPsw = "";
 String receivedFunction;
 String receivedMessage;
-boolean invia = false;
 
 // SETUP DELL'ARDUINO
 void setup() {
@@ -54,6 +53,7 @@ void setup() {
   dht.begin();                  // Inizializza Sensore Temperatura
   doorServo.attach(servoPin);   // Inizializzazione ServoMotore
   closeMotor();                 // ServoMotore su Chiuso
+  resetSituation();             // Reset MQTT
   Serial.println("INIZIALIZZAZIONE COMPLETATA.");
   delay(1000);
 }
@@ -234,15 +234,7 @@ void receiveFramework_slv(String funzione, String messaggio) {
   }
   if(funzione == "RST_CHECK") {
     if(messaggio == "RST_OK") {
-      // rstBtn = true;
-      statoImp = "ATTESA";
-      statoPsw = "ATTESA";
-      statoDoor = "CHIUSA";
-      statoAlarm = "CICALINO NON IN AZIONE";
-      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-      inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+      resetSituation();
     }
   }
   if(funzione == "MOT_OPENC") {
@@ -253,6 +245,17 @@ void receiveFramework_slv(String funzione, String messaggio) {
       closeMotor();
     }
   }
+}
+
+void resetSituation() {
+  statoImp = "ATTESA";
+  statoPsw = "ATTESA";
+  statoDoor = "CHIUSA";
+  statoAlarm = "CICALINO NON IN AZIONE";
+  inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+  inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+  inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+  inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
 }
 
 void openMotor() {
