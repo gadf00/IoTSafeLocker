@@ -196,7 +196,7 @@ void receiveData(int byteCount) {
 
 // INVIA DATI I2C
 void sendData() {
-  while(prec_pswState != pswState) {
+  while(prec_statoPsw != statoPsw) {
     delay(10);
   }
   String response = String("PSW_CHECK-") + String(pswState);
