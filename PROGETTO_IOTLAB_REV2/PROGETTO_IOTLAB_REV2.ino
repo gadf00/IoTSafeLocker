@@ -41,24 +41,24 @@ String receivedFunction;
 String receivedMessage;
 boolean invia = false;
 
+// SETUP DELL'ARDUINO
 void setup() {
   Wire.begin(8);                // Inizializza la comunicazione I2C e assegna l'indirizzo 8
-
-
   Wire.onReceive(receiveData);  // Definisce la funzione callback per gestire la ricezione dal master
-  Wire.onRequest(sendData); // Funzione callback per inviare al master
-  Serial.begin(9600);
-  connectToWiFi();
-  client.setServer(mqttServer, mqttPort);
-  client.setCallback(callback);
-  connectToMQTT();  // Muovi la connessione MQTT nel setup
-  dht.begin();
-  doorServo.attach(servoPin);
-  closeMotor();
+  Wire.onRequest(sendData);     // Funzione callback per inviare al master
+  Serial.begin(9600);           // Inizializzazione Seriale
+  connectToWiFi();              // Connessione WiFi
+  client.setServer(mqttServer, mqttPort); // Dichiarazione Server MQTT
+  client.setCallback(callback); // Dichiarazione Funzione di CallBack
+  connectToMQTT();              // Connetti al Server MQTT
+  dht.begin();                  // Inizializza Sensore Temperatura
+  doorServo.attach(servoPin);   // Inizializzazione ServoMotore
+  closeMotor();                 // ServoMotore su Chiuso
   Serial.println("INIZIALIZZAZIONE COMPLETATA.");
   delay(1000);
 }
 
+// VOID DI CONNESSIONE ALLA RETE WiFi
 void connectToWiFi() {
   Serial.print("Connessione alla rete WiFi ");
   while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
@@ -71,70 +71,79 @@ void connectToWiFi() {
   Serial.println(WiFi.localIP());
 }
 
+// VOID DI CONNESSIONE AL SERVER MQTT
 void connectToMQTT() {
   if (!client.connected()) {
-    Serial.print("Tentativo di connessione al server MQTT...");
+    Serial.print("Tentativo di connessione al server MQTT ");
     while (!client.connect("ArduinoClient", mqttUser, mqttPassword)) {
       Serial.print(".");
-      delay(5000);
+      delay(2500);
     }
-
     if (client.connected()) {
-      Serial.println(" Connesso al server MQTT");
+      Serial.println("");
+      Serial.println("Connesso al server MQTT.");
       client.subscribe("secureBox_pswResult");
     } else {
-      Serial.println(" Connessione MQTT fallita");
+      Serial.println("Connessione MQTT fallita.");
     }
   }
 }
 
+// DICHIARAZIONE FUNZIONE DI CALLBACK MQTT
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Messaggio dal Broker MQTT [");
+  Serial.print(topic);
+  Serial.print("] ");
+  String msgRicevuto = "";
+  for (int i = 0; i < length; i++) {
+    msgRicevuto += (char)payload[i];
+  }
+  pswState = msgRicevuto;
+  Serial.println(msgRicevuto);
+}
+
+// LOOP DEL SISTEMA
 void loop() {
-  // Leggi temperatura e umidità dal sensore
-  float temperature = dht.readTemperature();
+  float temperature = dht.readTemperature(); // LETTURA TEMPERATURA E UMIDITA' DAL SENSORE DHT
   float humidity = dht.readHumidity();
-
-  // Verifica se la lettura è avvenuta con successo
-  if (isnan(temperature) || isnan(humidity)) {
+  if (isnan(temperature) || isnan(humidity)) { // SE SENSORE DA ERRORE
     Serial.println("Errore nella lettura del sensore DHT!");
-  } else {
-    // Stampa i dati sulla seriale
-    //Serial.print("Temperatura: ");
-    //Serial.print(temperature);
-    //Serial.println(" °C");
-
-    //Serial.print("Umidità: ");
-    //Serial.print(humidity);
-    //Serial.println(" %");
+  } else { // SE SENSORE NON DA ERRORE 
+    //Stampa i dati sulla seriale
+    Serial.print("Temperatura: ");
+    Serial.print(temperature);
+    Serial.print(" °C   // ");
+    Serial.print("Umidità: ");
+    Serial.print(humidity);
+    Serial.println(" %");
 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
-    inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-    inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-    inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+    // inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+    // inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+    // inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+    // inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
   }
-
   // Aggiungi la gestione della connessione MQTT qui
-  connectToMQTT();
+  // connectToMQTT();
   client.loop();  // Mantieni la connessione MQTT aperta
-
-  delay(500);
+  delay(1000);
 }
 
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
-  connectToMQTT();
+  //connectToMQTT();
   client.publish(mqttTopic.c_str(), value.c_str());
   //Serial.print("Inviato MQTT: ");
   //Serial.print(mqttTopic);
   //Serial.print("   Topic: ");
   //Serial.print(value);
   //Serial.println(";");
-  // Non disconnettere qui
+  //Non disconnettere qui
   //client.disconnect();
   delay(500);
 }
 
-
+// RICEVI DATI I2C
 void receiveData(int byteCount) {
   int dimData = 16;
   if (dimensionePsw > 0) dimData = dimensionePsw + 10;
@@ -147,9 +156,10 @@ void receiveData(int byteCount) {
   String receivedString = byteArrayToString(receivedData, sizeof(receivedData));
   receivedFunction = extractField(receivedString, '-', 0);
   receivedMessage = extractField(receivedString, '-', 1);
-  Serial.print("FUNZIONE RICHIESTA: ");
-  Serial.println(receivedFunction);
-  Serial.print("MESSAGGIO: ");
+  Serial.print("I2C - Messaggio Ricevuto dal Server: ");
+  Serial.print("Funzione: ");
+  Serial.print(receivedFunction);
+  Serial.print("   Msg: ");
   Serial.println(receivedMessage);
   if (dimensionePsw > 0) {
     dimensionePsw = 0;
@@ -158,12 +168,14 @@ void receiveData(int byteCount) {
   receiveFramework_slv(receivedFunction, receivedMessage);
 }
 
+// INVIA DATI I2C
 void sendData() {
   String response = String("PSW_CHECK-") + String(pswState);
   byte byteResponse[16];
   stringToByteArray(response, byteResponse, sizeof(byteResponse));
   Wire.write(byteResponse, sizeof(byteResponse));
-  Serial.println("MESSAGGIO INVIATO AL SERVER");
+  Serial.print("I2C - Messaggio Inviato al Server: ");
+  Serial.println(response);
 }
 
 void receiveFramework_slv(String funzione, String messaggio) {
@@ -171,8 +183,6 @@ void receiveFramework_slv(String funzione, String messaggio) {
   // 1 - IMP_CHECK - IMPRONTA
   // 2 - PSW_CHECK - PASSWORD
   // 3 - DOR_CHECK - PORTA
-  // 4 - TMP_CHECK - TEMPERATURA
-  // 5 - UMH_CHECK - UMIDITA'
   // 6 - ALM_CHECK - ALLARME SONORO
   // 7 - RST_CHECK - RESET
   // 8 - MOT_OPENC - CONTROLLO MOTORE
@@ -181,21 +191,22 @@ void receiveFramework_slv(String funzione, String messaggio) {
   // 1 - IMP_OK IMP_ER
   // 2 - PSW
   // 3 - DOR_OP DOR_CL
-  // 4 - TEMPERATURE
-  // 5 - UMIDITY
   // 6 - ALM_ON ALM_OF
   // 7 - RST_OK
   // 8 - MOT_ON, MOT_OF
   if(funzione.equals("IMP_CHECK")) {
     if(messaggio.equals("IMP_OK")) {
       statoImp = "RICONOSCIUTA";
+      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
     else if (messaggio.equals("IMP_ER")) {
       statoImp = "NON RICONOSCIUTA";
+      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
   }
   if(funzione == "PSW_CHECK") {
     statoPsw = messaggio;
+    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
   }
   if(funzione == "PSW_DIMEN") {
     dimensionePsw = messaggio.toInt();
@@ -203,32 +214,35 @@ void receiveFramework_slv(String funzione, String messaggio) {
   if(funzione == "DOR_CHECK") {
     if(messaggio == "DOR_OP") {
       statoDoor = "APERTA";
+      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
     else if (messaggio == "DOR_CL") {
       statoDoor = "CHIUSA";
+      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
-  }
-  if(funzione == "TMP_CHECK") {
-    // 
-  }
-  if(funzione == "UMH_CHECK") {
-    //
   }
   if(funzione == "ALM_CHECK") {
     if(messaggio == "ALM_ON") {
       statoAlarm = "CICALINO IN AZIONE";
+      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+
     }
     if(messaggio == "ALM_OF") {
       statoAlarm = "CICALINO NON IN AZIONE";
+      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
     }
   }
   if(funzione == "RST_CHECK") {
     if(messaggio == "RST_OK") {
-      rstBtn = true;
+      // rstBtn = true;
       statoImp = "ATTESA";
       statoPsw = "ATTESA";
       statoDoor = "CHIUSA";
       statoAlarm = "CICALINO NON IN AZIONE";
+      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+      inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
     }
   }
   if(funzione == "MOT_OPENC") {
@@ -251,12 +265,12 @@ void closeMotor() {
   Serial.println("MOTORE SU CHIUSO.");
 }
 
+// FUNZIONI DI ACCOMPAGNAMENTO E UTILITA'
 
 // Funzione per estrarre un campo da una stringa
 String extractField(String input, char separator, int index) {
   int separatorCount = 0;
   int startIndex = 0;
-
   for (int i = 0; i <= input.length(); i++) {
     if (input[i] == separator || i == input.length()) {
       separatorCount++;
@@ -268,7 +282,6 @@ String extractField(String input, char separator, int index) {
       startIndex = i + 1;
     }
   }
-  // Se l'indice richiesto è troppo grande o il separatore non è presente, restituisci una stringa vuota
   return "";
 }
 
@@ -286,17 +299,4 @@ void stringToByteArray(String input, byte* output, int maxLength) {
   for (int i = 0; i < maxLength && i < input.length(); i++) {
     output[i] = input.charAt(i);
   }
-}
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  
-  controlPsw = "";
-  for (int i = 0; i < length; i++) {
-    controlPsw += (char)payload[i];
-  }
-  pswState = controlPsw;
-  Serial.println(controlPsw);
 }
