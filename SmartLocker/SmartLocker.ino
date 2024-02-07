@@ -347,11 +347,6 @@ boolean checkPsw(){
     Serial.print(" -");
     delay(1000);
   }
-  //while(!pswRicevuta) {
-    //Serial.print("-");
-    //pswOk = receiveDataFromSlave();
-    //delay(2000);
-  //}
   pswOk = receiveDataFromSlave();
   Serial.println("Attesa Finita;");
   if(pswOk) {
@@ -527,21 +522,17 @@ boolean receiveFramework_srv(String function, String dataMessage) {
   // DATO CHE FUNZIONA TUTTO TRAMITE CONTROLLI
   // QUESTO FRAMEWORK RITORNA SOLAMENTE TRUE O FALSE
   if(function == "PSW_CHECK") {
-    if(dataMessage == "PSW_OK") {
-      pswRicevuta = true;
+    if(strcmp(dataMessage, "PSW_OK") == 0) {
       return true;
     }
-    else if(dataMessage == "PSW_ER") {
-      pswRicevuta = true;
+    else if(strcpm(dataMessage, "PSW_ER") == 0) {
       return false;
     }
-    else if(dataMessage == "PSW_AT"){
-      pswRicevuta = false;
+    else {
       return false;
     }
   }
   else {
-    pswRicevuta = false;
     return false;
   }
 }

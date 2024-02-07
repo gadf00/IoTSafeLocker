@@ -196,7 +196,7 @@ void receiveData(int byteCount) {
 
 // INVIA DATI I2C
 void sendData() {
-  String response = String("PSW_CHECK-") + String(statoPsw);
+  String response = String("PSW_CHECK-") + String(pswState);
   byte byteResponse[16];
   stringToByteArray(response, byteResponse, sizeof(byteResponse));
   Wire.write(byteResponse, sizeof(byteResponse));
