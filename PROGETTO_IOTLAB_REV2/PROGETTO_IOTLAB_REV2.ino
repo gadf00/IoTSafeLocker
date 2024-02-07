@@ -125,20 +125,20 @@ void loop() {
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
     inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-    // inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-    // inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-    // inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+    inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+    inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
   }
   // Aggiungi la gestione della connessione MQTT qui
   // connectToMQTT();
   client.loop();  // Mantieni la connessione MQTT aperta
-  delay(2000);
+  delay(1000);
 }
 
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
   if (client.connected()) {
     client.publish(mqttTopic.c_str(), value.c_str());
-    delay(500);
+    delay(250);
   } else {
     Serial.println("Connessione MQTT non attiva. Tentativo di riconnessione...");
     connectToMQTT(); // Se la connessione non è attiva, prova a riconnetterti
@@ -208,7 +208,7 @@ void receiveFramework_slv(String funzione, String messaggio) {
   }
   if(funzione == "PSW_CHECK") {
     statoPsw = messaggio;
-    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+    //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
   }
   if(funzione == "PSW_DIMEN") {
     dimensionePsw = messaggio.toInt();
@@ -216,22 +216,22 @@ void receiveFramework_slv(String funzione, String messaggio) {
   if(funzione == "DOR_CHECK") {
     if(messaggio == "DOR_OP") {
       statoDoor = "APERTA";
-      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+      //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
     else if (messaggio == "DOR_CL") {
       statoDoor = "CHIUSA";
-      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+      //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
   }
   if(funzione == "ALM_CHECK") {
     if(messaggio == "ALM_ON") {
       statoAlarm = "CICALINO IN AZIONE";
-      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+      //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
 
     }
     if(messaggio == "ALM_OF") {
       statoAlarm = "CICALINO NON IN AZIONE";
-      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+      //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
     }
   }
   if(funzione == "RST_CHECK") {
@@ -254,10 +254,10 @@ void resetSituation() {
   statoPsw = "ATTESA";
   statoDoor = "CHIUSA";
   statoAlarm = "CICALINO NON IN AZIONE";
-  inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-  inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-  inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-  inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+  //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+  //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+  //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+  //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
 }
 
 void openMotor() {
