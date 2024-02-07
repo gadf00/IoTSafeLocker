@@ -151,7 +151,7 @@ boolean faseLogin() {
   lcd.print("      Inserire      ");
   lcd.setCursor(0,1);
   lcd.print(" Impronta  Digitale ");
-  while(!checkImp() && !impOk && !rstPressedbool) {
+  while(!checkImp() && !impOk && !rstPressedbool && !adminReset_bool) {
     delay(50);
   }
   if(rstPressedbool) {
@@ -162,6 +162,10 @@ boolean faseLogin() {
     Serial.println("INTERROMPO OPERAZIONE, ALLARME PORTA APERTA.");
     return false;
   }
+  if(adminReset_bool) {
+    Serial.println("INTERROMPO OPERAZIONE, ADMIN RESET.");
+    return false;
+  }
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(" Inserire Password: ");
@@ -169,7 +173,7 @@ boolean faseLogin() {
   lcd.print("Verde per confermare");
   lcd.setCursor(0,3);
   lcd.print("* per cancellare");
-  while(!checkPsw() && !pswOk && !rstPressedbool && !doorOpenedbool) {
+  while(!checkPsw() && !pswOk && !rstPressedbool && !doorOpenedbool && !adminReset_bool) {
     delay(50);
   }
   if(rstPressedbool) {
@@ -178,6 +182,10 @@ boolean faseLogin() {
   }
   if(doorOpenedbool) {
     Serial.println("INTERROMPO OPERAZIONE, ALLARME PORTA APERTA.");
+    return false;
+  }
+  if(adminReset_bool) {
+    Serial.println("INTERROMPO OPERAZIONE, ADMIN RESET.");
     return false;
   }
   return true;
@@ -253,6 +261,7 @@ void loop() {
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
   if(adminReset_bool) {
+    Serial.println("SONO QUIIIIIII PORCODIO");
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("   ATTENZIONE!!!!   ");
@@ -296,17 +305,20 @@ void allarmeInfinito() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true && !adminReset()) {
+  while(true && !adminReset_bool) {
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
     lcd.print("TENTATIVO INTRUSIONE");
     lcd.setCursor(0,2);
     lcd.print(" GUARDIE IN ARRIVO! ");
-    tone(BUZZER_PIN, 2000, 250);
-    delay(250);
-    noTone(BUZZER_PIN);
-    delay(250);
+    for(int i = 0; i < 3; i++) {
+     tone(BUZZER_PIN, 2000, 250);
+     delay(250);
+     noTone(BUZZER_PIN);
+     delay(250); 
+    }
+    adminReset();
   }
 }
 
@@ -315,21 +327,27 @@ void allarmeTentativiEsauriti() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true && !adminReset()) {
+  while(true && !adminReset_bool) {
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
     lcd.print("TENTATIVI ESAURITI!!");
     lcd.setCursor(0,2);
     lcd.print("CONTATTATO UN ADMIN!");
-    tone(BUZZER_PIN, 1300, 250);
-    delay(250);
-    noTone(BUZZER_PIN);
-    delay(250);
+    for(int i = 0; i < 3; i++) {
+     tone(BUZZER_PIN, 1300, 250);
+     delay(250);
+     noTone(BUZZER_PIN);
+     delay(250); 
+    }
+    adminReset();
+    Serial.print("ALLTENTESAU: ");
+    Serial.println(adminReset_bool);
   }
 }
 
-boolean adminReset() {
+void adminReset() {
+  delay(3000);
   bool tempOk = receiveDataFromSlave("ADMIN");
   if(tempOk) {
     lcd.clear();
@@ -342,8 +360,6 @@ boolean adminReset() {
     adminReset_bool = true;
     delay(1000);
   }
-  delay(1000);
-  return tempOk;
 }
 
 void tonoBreve() {
@@ -479,6 +495,8 @@ boolean checkImp() {
         if (tentativiImp == 0) {
           Serial.println("Tentativi massimi raggiunti, attivo allarme;");
           allarmeTentativiEsauriti();
+          Serial.print("CHECKIMP: ");
+          Serial.println(adminReset_bool);
           return false;
         }
       }
@@ -610,7 +628,7 @@ boolean receiveDataFromSlave(String func) {
   String receivedFunction = extractField(receivedString, '-', 0);
   String receivedMessage = extractField(receivedString, '-', 1);
   Serial.print("Ricevuto dallo Slave - Funzione: ");
-  Serial.println(receivedFunction);
+  Serial.print(receivedFunction);
   Serial.print("; Messaggio dallo Slave: ");
   Serial.print(receivedMessage);
   Serial.println(";");
