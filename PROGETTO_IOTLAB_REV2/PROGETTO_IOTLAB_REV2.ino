@@ -127,12 +127,12 @@ void loop() {
     Serial.println("Errore nella lettura del sensore DHT!");
   } else { // SE SENSORE NON DA ERRORE 
     //Stampa i dati sulla seriale
-    Serial.print("Temperatura: ");
-    Serial.print(temperature);
-    Serial.print(" °C   // ");
-    Serial.print("Umidità: ");
-    Serial.print(humidity);
-    Serial.println(" %");
+    //Serial.print("Temperatura: ");
+    //Serial.print(temperature);
+    //Serial.print(" °C   // ");
+    //Serial.print("Umidità: ");
+    //Serial.print(humidity);
+    //Serial.println(" %");
 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
@@ -196,6 +196,9 @@ void receiveData(int byteCount) {
 
 // INVIA DATI I2C
 void sendData() {
+  while(prec_pswState != pswState) {
+    delay(10);
+  }
   String response = String("PSW_CHECK-") + String(pswState);
   byte byteResponse[16];
   stringToByteArray(response, byteResponse, sizeof(byteResponse));
