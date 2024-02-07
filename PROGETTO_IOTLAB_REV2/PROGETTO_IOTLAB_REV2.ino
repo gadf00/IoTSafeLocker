@@ -105,11 +105,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.println("Messaggio dal Broker MQTT ignorato perchè siamo in avvio.");
     return;
   }
-  if(strcmp(topic, "secureBox_pswResult")) {
+  if(strcmp(topic, "secureBox_pswResult") == 0) {
     Serial.println("pswState aggiornato;");
     pswState = msgRicevuto;
   }
-  if(strcmp(topic, "secureBox_resetAdmin")) {
+  if(strcmp(topic, "secureBox_resetAdmin") == 0) {
     Serial.println("INVOCATO RESET DELL'ADMIN !!!!!!!!!");
   }
 }
