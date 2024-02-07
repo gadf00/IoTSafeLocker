@@ -522,10 +522,10 @@ boolean receiveFramework_srv(String function, String dataMessage) {
   // DATO CHE FUNZIONA TUTTO TRAMITE CONTROLLI
   // QUESTO FRAMEWORK RITORNA SOLAMENTE TRUE O FALSE
   if(function == "PSW_CHECK") {
-    if(strcmp(dataMessage, "PSW_OK") == 0) {
+    if(strcmp(dataMessage.c_str(), "PSW_OK") == 0) {
       return true;
     }
-    else if(strcpm(dataMessage, "PSW_ER") == 0) {
+    else if(strcpm(dataMessage.c_str(), "PSW_ER") == 0) {
       return false;
     }
     else {
