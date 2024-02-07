@@ -36,6 +36,11 @@ String statoPsw = "ATTESA";
 String statoDoor = "CHIUSA";
 String statoAlarm = "CICALINO NON IN AZIONE";
 
+String prec_statoImp = "";
+String prec_statoPsw = "";
+String prec_statoDoor = "";
+String prec_statoAlarm = "";
+
 String controlPsw = "";
 String receivedFunction;
 String receivedMessage;
@@ -131,10 +136,22 @@ void loop() {
 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
-    inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-    inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-    inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
+    if(statoImp != prec_statoImp) {
+      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+      prec_statoImp = statoImp;
+    }
+    if(statoPsw != prec_statoPsw) {
+      inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+      prec_statoPsw = statoPsw;
+    }
+    if(statoDoor != prec_statoDoor) {
+      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+      prec_statoDoor = statoDoor;
+    }
+    if(statoAlarm != prec_statoAlarm) {
+      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm); 
+      prec_statoAlarm = statoAlarm;
+    }
   }
   // Aggiungi la gestione della connessione MQTT qui
   // connectToMQTT();
