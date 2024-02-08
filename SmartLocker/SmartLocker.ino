@@ -1,3 +1,17 @@
+/* **********
+PROGRAMMA ARDUINO MEGA
+COLLEGATI:
+ - LED GREEN
+ - LED RED
+ - BTN RED
+ - BTN GREEN
+ - BUZZER
+ - DOOR
+ - LCD
+ - KEYPAD
+ - I2C
+********** */
+
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Fingerprint.h>
@@ -36,16 +50,13 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);  // Cambia 0x27 con l'indirizzo I2C corretto
 int tentativiImp = 5;
 int tentativiPsw = 5;
 bool doorLocked = true;
-bool firstWrite = true;
 bool impOk = false;
 bool pswOk = false;
 bool login = false;
 bool pswRicevuta = false;
 bool adminReset_bool = false;
-// String doorCheck = "";
-// String tempCheck = "";
-// String umiCheck = "";
-// String alarmCheck = "";
+bool varControllo1 = false;
+bool firstOn = true;
 
 // DICHIARAZIONE VARIABILI PER ATTACHINTERRUPT
 volatile bool rstPressedbool = false;
@@ -56,11 +67,11 @@ unsigned long debounceDelay = 75;
 int contRst = 0;
 int contDoor = 0;
 
-// INIZIO PROGRAMMA
+// SETUP DEL PROGRAMMA
 void setup() {
   Wire.begin(); // DICHIARAZIONE I2C
   Serial.begin(9600); // DICHIARAZIONE SERIALE
-  while (!Serial);
+  while (!Serial); // INIZIALIZZAZIONE SERIALE
   finger.begin(57600); // INIZIALIZZAZIONE LETTORE DI IMPRONTE
   delay(5);
   if (finger.verifyPassword()) {
@@ -106,12 +117,10 @@ void doorStatusChanged() {
     lastDebounceTime_door_o = currentMillis;
     if(digitalRead(DOOR_PIN) == HIGH) {
       Serial.println("PORTA APERTA");
-      //sendFramework_srv(3, "DOR_OP");
       doorOpenedbool = true;
     }
     if(digitalRead(DOOR_PIN) == LOW) {
       Serial.println("PORTA CHIUSA");
-      //sendFramework_srv(3, "DOR_CL");
       doorOpenedbool = false;
     }
   }
@@ -125,20 +134,18 @@ boolean faseLogin() {
   lcd.print("   Secure Box n.1   ");
   lcd.setCursor(0,3);
   lcd.print(" Verde per iniziare ");
-  if(doorLocked){
+  if(doorLocked) { // INIZIALIZZAZIONE LED ROSSO E VERDE
     digitalWrite(LED_GREEN_PIN,LOW);
     digitalWrite(LED_RED_PIN,HIGH);
-  }
-  else{
+  } else {
     digitalWrite(LED_RED_PIN,LOW);
     digitalWrite(LED_GREEN_PIN,HIGH);
   }
-  while((digitalRead(BTN_GREEN_PIN) == HIGH) && !doorOpenedbool) {
-    // || (digitalRead(BTN_GREEN_PIN) == LOW && firstWrite && !doorOpenedbool))
+  // LOOP FINCHE' NON PREMIAMO IL VERDE
+  while((digitalRead(BTN_GREEN_PIN) == HIGH) && !doorOpenedbool) { 
     delay(50);
   }
-  firstWrite = false;
-  if(rstPressedbool) {
+  if(rstPressedbool) { // CONTROLLI DI INTERRUZIONE IN CASO DI RST E PORTA APERTA
     Serial.println("INTERROMPO OPERAZIONE, RST PREMUTO DOPO INIZIO.");
     return false;
   }
@@ -146,15 +153,17 @@ boolean faseLogin() {
     Serial.println("INTERROMPO OPERAZIONE, ALLARME PORTA APERTA.");
     return false;
   }
+  // FASE IMPRONTA DIGITALE
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("      Inserire      ");
   lcd.setCursor(0,1);
   lcd.print(" Impronta  Digitale ");
-  while(!checkImp() && !impOk && !rstPressedbool && !adminReset_bool) {
+  // LOOP FINCHE' IMPRONTA NON E' OK E NON E' PREMUTO RESET E NON C'E' RESET ADMIN
+  while(!checkImp() && !impOk && !rstPressedbool && !adminReset_bool) { 
     delay(50);
   }
-  if(rstPressedbool) {
+  if(rstPressedbool) { // CONTROLLI DI INTERRUZIONE IN CASO DI RST E PORTA APERTA E ADMIN RESET
     Serial.println("INTERROMPO OPERAZIONE, RST PREMUTO DOPO IMPRONTA.");
     return false;
   }
@@ -166,6 +175,7 @@ boolean faseLogin() {
     Serial.println("INTERROMPO OPERAZIONE, ADMIN RESET.");
     return false;
   }
+  // FASE PASSWORD
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(" Inserire Password: ");
@@ -176,7 +186,7 @@ boolean faseLogin() {
   while(!checkPsw() && !pswOk && !rstPressedbool && !doorOpenedbool && !adminReset_bool) {
     delay(50);
   }
-  if(rstPressedbool) {
+  if(rstPressedbool) { // CONTROLLI DI INTERRUZIONE IN CASO DI RST E PORTA APERTA E ADMIN RESET
     Serial.println("INTERROMPO OPERAZIONE, RST PREMUTO DOPO PSW.");
     return false;
   }
@@ -191,21 +201,36 @@ boolean faseLogin() {
   return true;
 }
 
-bool varControllo1 = false;
-
 // LOOP
 void loop() {
+  if(firstOn) { // SE PRIMA ACCENSIONE ASPETTIAMO 5 SECONDI PER INIZIALIZZARE REV2
+    firstOn = false;
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("  INIZIALIZZAZIONE  ");
+    lcd.setCursor(0,1);
+    lcd.print("      IN CORSO      ");
+    lcd.setCursor(5,2);
+    for(int i = 0; i < 5; i++) {
+      lcd.print("- ");
+      delay(1000);
+    }
+    lcd.setCursor(0,3);
+    lcd.print("     COMPLETATO     ");
+    delay(1000);
+  }
+  // SE NON E' PREMUTO IL RESET E NON E' APERTA LA PORTA E NON C'E' LOGIN
   if(!rstPressedbool && !doorOpenedbool && !login) {
     login = faseLogin();
   }
   if(!login) {
     Serial.println("Login Fallita.");
   }
-  if(!login && doorOpenedbool) {
+  if(!login && doorOpenedbool) { // SE LA LOGIN NON E' FATTA E LA PORTA E' APERTA
     comunicaPorta();
     allarmeInfinito();
   }
-  if(login && !rstPressedbool) {
+  if(login && !rstPressedbool) { // SE LA LOGINE E' FATTA E NON E' PREMUTO IL RESET
     if(!varControllo1) { 
       // SE LA LOGIN E' FATTA E IL BOTTONE DI RESET NON RISULTA PREMUTO
       // SIAMO NEL PUNTO IN CUI POSSIAMO APRIRE LA PORTA, QUINDI SBLOCCHIAMO IL SERVOMOTORE
@@ -218,14 +243,14 @@ void loop() {
       lcd.setCursor(0,2);
       lcd.print("       PORTA.       ");     
       sendFramework_srv(8, "MOT_ON");
-      while(!doorOpenedbool && !rstPressedbool){
+      while(!doorOpenedbool && !rstPressedbool) { // LOOP FINCHE' PORTA NON APERTA E RST NON PREMUTO
         delay(50);
       }
       comunicaPorta();
     }
     varControllo1 = true;
   }
-  if(login && doorOpenedbool) {
+  if(login && doorOpenedbool) { // SE LOGIN E' FATTO E PORTA E' APERTA
     if(rstPressedbool) {
       // SE LA LOGIN E' FATTA E LA PORTA E' APERTA MA VIENE PREMUTO IL RESET
       // DOBBIAMO AVVISARE DI CHIUDERE LA PORTA
@@ -237,7 +262,7 @@ void loop() {
       lcd.print(" CHIUDERE LA PORTA! ");
       lcd.setCursor(0,2);
       lcd.print("   PER CONCLUDERE   ");
-      while(doorOpenedbool) {
+      while(doorOpenedbool) { // LOOP FINCHE' NON SI CHIUDE LA PORTA
         tonoBreve();
         delay(50);
       }
@@ -260,8 +285,7 @@ void loop() {
     sendFramework_srv(7, "RST_OK");
     Serial.println("RESET AVVENUTO, VARIABILI AZZERATE (TRANNE I TENTATIVI)");
   }
-  if(adminReset_bool) {
-    Serial.println("SONO QUIIIIIII PORCODIO");
+  if(adminReset_bool) { // SE VIENE EFFETTUATO IL RESET DALL'ADMIN
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("   ATTENZIONE!!!!   ");
@@ -269,7 +293,7 @@ void loop() {
     lcd.print(" CHIUDERE LA PORTA! ");
     lcd.setCursor(0,2);
     lcd.print("   PER CONCLUDERE   ");
-    while(doorOpenedbool) {
+    while(doorOpenedbool) { // LOOP FINCHE' NON VIENE CHIUSA LA PORTA
       tonoBreve();
       delay(50);
     }
@@ -285,7 +309,7 @@ void loop() {
     sendFramework_srv(7, "RST_OK");
     Serial.println("RESET ADMIN AVVENUTO, TUTTE LE VARIABILI RESETTATE.");
   }
-  delay(250);
+  delay(250); // DELAY FINALE PER NON ANDARE TROPPO VELOCI ALL'INIZIO DEL LOOP
 }
 
 //COMUNICAZIONE PORTA APERTA/CHIUSA
@@ -305,7 +329,7 @@ void allarmeInfinito() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true && !adminReset_bool) {
+  while(true && !adminReset_bool) { // LOOP FINCHE' ADMIN NON RESETTA
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
@@ -327,14 +351,14 @@ void allarmeTentativiEsauriti() {
   // AVVISO ARDUINO REV2 E PARTE L'ALLARME
   sendFramework_srv(6, "ALM_ON");
   lcd.clear();
-  while(true && !adminReset_bool) {
+  while(true && !adminReset_bool) { // LOOP FINCHE' ADMIN NON RESETTA
     lcd.setCursor(0,0);
     lcd.print("   Secure Box n.1   ");
     lcd.setCursor(0,1);
     lcd.print("TENTATIVI ESAURITI!!");
     lcd.setCursor(0,2);
     lcd.print("CONTATTATO UN ADMIN!");
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 3; i++) { // BUZZER 3 VOLTE
      tone(BUZZER_PIN, 1300, 250);
      delay(250);
      noTone(BUZZER_PIN);
@@ -347,9 +371,9 @@ void allarmeTentativiEsauriti() {
 }
 
 void adminReset() {
-  delay(3000);
-  bool tempOk = receiveDataFromSlave("ADMIN");
-  if(tempOk) {
+  delay(3000); // DELAY PER NON COMUNICARE TROPPO VELOCEMENTE CON REV2
+  bool tempOk = receiveDataFromSlave("ADMIN"); // RICHIESTA AL REV2 SE C'E' RESET
+  if(tempOk) { 
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("RICEVUTO");
@@ -362,6 +386,7 @@ void adminReset() {
   }
 }
 
+// TONO PIU' TENUE E BREVE PER PICCOLI AVVISI
 void tonoBreve() {
   tone(BUZZER_PIN, 1300, 250);
   delay(250);
@@ -374,7 +399,7 @@ boolean checkPsw(){
   lcd.setCursor(0,1);
   String entered_code = "";
   while(digitalRead(BTN_GREEN_PIN) == HIGH) {
-    if(rstPressedbool) {
+    if(rstPressedbool) { // CONTROLLO DI RESET E PORTA 
       Serial.println("INTERROMPO OPERAZIONE, RESET PREMUTO.");
       return false;
     }
@@ -386,7 +411,7 @@ boolean checkPsw(){
     if(key) {
       entered_code += key;
       lcd.print("*");
-      if(key == '*') {
+      if(key == '*') { // SE SI PREME * CANCELLARE STRINGA INSERITA
         entered_code = "";
         lcd.setCursor(0,1);
         lcd.print("                    ");
@@ -394,12 +419,9 @@ boolean checkPsw(){
       }
     }
   }
-  Serial.print("Codice Inserito: ");
+  Serial.print("Password Inserita: ");
   Serial.println(entered_code);
-  // INVIO AL REV2 PER IL CONTROLLO
-  sendFramework_srv(2, entered_code);
-
-  // RICEVO LA RISPOSTA DAL REV2
+  sendFramework_srv(2, entered_code); // INVIO AL REV2 PER IL CONTROLLO
   Serial.print("Inizio attesa password:");
   lcd.clear();
   lcd.setCursor(0,0);
@@ -407,22 +429,22 @@ boolean checkPsw(){
   lcd.setCursor(0,1);
   lcd.print("      IN CORSO      ");
   lcd.setCursor(4,2);
-  for(int i = 0; i < 5; i++){
+  for(int i = 0; i < 5; i++){ // LOOP PER FAR PASSARE 3,5 SECONDI
     Serial.print(" -");
     lcd.print(" -");
-    delay(1000);
+    delay(700);
   }
-  pswOk = receiveDataFromSlave("PASSWORD");
-  Serial.println("Attesa Finita;");
+  pswOk = receiveDataFromSlave("PASSWORD"); // RICEVO LA RISPOSTA DAL REV2
+  Serial.println(" Attesa Finita;");
   lcd.setCursor(0,3);
   lcd.print("  ATTESA  CONCLUSA  ");
   delay(1000);
-  if(pswOk) {
+  if(pswOk) { // SE LA PASSWORD CORRISPONDE
     Serial.println("La Password Corrisponde;");
     tentativiPsw = 5;
     return true;
   }
-  else {
+  else { // SE LA PASSWORD E' SBAGLIATA
     Serial.println("La Password è sbagliata;");
     tentativiPsw--;
     lcd.clear();
@@ -434,10 +456,10 @@ boolean checkPsw(){
     lcd.print("Ancora ");
     lcd.print(tentativiPsw);
     lcd.print(" tentativi.");
-    if(tentativiPsw == 0) {
+    if(tentativiPsw == 0) { // SE TENTATIVI ESAURITI
       Serial.println("Tentativi massimi raggiunti, attivo allarme;");
       allarmeTentativiEsauriti();
-      return false;
+      return false; // SERVE PER RITORNARE IL CONTROLLO AL LOOP
     }
     delay(2000);
     lcd.clear();
@@ -447,25 +469,25 @@ boolean checkPsw(){
     lcd.print("Verde per confermare");
     lcd.setCursor(0,3);
     lcd.print("* per cancellare");
-    return false;
+    return false; // SERVER PER RITORNARE IL CONTROLLO AL LOOP
   }
 }
 
 // CHECK DELL'IMPRONTA
 boolean checkImp() {
   // LEGGI L'IMPRONTA, QUESTO E' UN WHILE, IMPOSSIBILE FARE CONTROLLI DURANTE QUESTO
+  // PORTA RESET ECC' VERRANNO CONTROLLATI DOPO
   uint8_t p = finger.getImage(); 
   if(p != FINGERPRINT_NOFINGER){
     Serial.println("Impronta acquisita;");
     p = finger.image2Tz();
     if(p == FINGERPRINT_OK){
       p = finger.fingerSearch();
-      if(p == FINGERPRINT_OK){
+      if(p == FINGERPRINT_OK) { // SE TROVO L'IMPRONTA
         Serial.print("Impronta trovata con id: ");
         Serial.println(finger.fingerID);
         tentativiImp = 5;
-        // AVVISO REV2 CHE IMPRONTA E' OK
-        sendFramework_srv(1,"IMP_OK");
+        sendFramework_srv(1,"IMP_OK"); // AVVISO REV2 CHE IMPRONTA E' OK
         lcd.setCursor(0,2);
         lcd.print("                    ");
         lcd.setCursor(0,2);
@@ -479,7 +501,7 @@ boolean checkImp() {
         impOk = true;
         return true;
       }
-      else if (p == FINGERPRINT_NOTFOUND) {
+      else if (p == FINGERPRINT_NOTFOUND) { // SE NON TROVO L'IMPRONTA
         tentativiImp--;
         if(tentativiImp < 0){
           tentativiImp = 0;
@@ -492,9 +514,8 @@ boolean checkImp() {
         Serial.print("Impronta non trovata, rimangono ");
         Serial.print(tentativiImp);
         Serial.println(" tentativi;");
-        // AVVISO REV2 CHE IMPRONTA NON E' OK
-        sendFramework_srv(1,"IMP_ER");
-        if (tentativiImp == 0) {
+        sendFramework_srv(1,"IMP_ER"); // AVVISO REV2 CHE IMPRONTA NON E' OK
+        if (tentativiImp == 0) { // SE HO FINITO I TENTATIVI
           Serial.println("Tentativi massimi raggiunti, attivo allarme;");
           allarmeTentativiEsauriti();
           Serial.print("CHECKIMP: ");
@@ -513,8 +534,6 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   // 1 - IMP_CHECK - IMPRONTA
   // 2 - PSW_CHECK - PASSWORD
   // 3 - DOR_CHECK - PORTA
-  // 4 - TMP_CHECK - TEMPERATURA (NON SERVE PIU SENSORE SPOSTATO SUL REV2)
-  // 5 - UMH_CHECK - UMIDITA' (NON SERVE PIU SENSORE SPOSTATO SUL REV2)
   // 6 - ALM_CHECK - ALLARME SONORO
   // 7 - RST_CHECK - RESET
   // 8 - MOT_OPENC - APRI CHIUDI MOTORE
@@ -523,8 +542,6 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   // 1 - IMP_OK IMP_ER MESSO
   // 2 - PSW
   // 3 - DOR_OP DOR_CL
-  // 4 - TEMPERATURE
-  // 5 - UMIDITY
   // 6 - ALM_ON ALM_OF
   // 7 - RST_OK
   // 8 - MOT_ON, MOT_OFF
@@ -537,11 +554,11 @@ void sendFramework_srv(int nFunction, String dataMessage) {
   
   String msgFinale = "";
   int defaultLen = 16;
-  if(nFunction == 1) {
+  if(nFunction == 1) { // ESECUZIONE INVIO IMPCHECK
     msgFinale = String("IMP_CHECK") + "-" + dataMessage;
     performSend(msgFinale, defaultLen);
   }
-  else if(nFunction == 2) {
+  else if(nFunction == 2) { // ESECUZIONE INVIO PASSWORD LENGTH E PASSWORD CHECK
     String dimString = String(dataMessage.length());
     padZerosLeft(dimString, 6);
     String msgFin1 = String("PSW_DIMEN") + "-" + dimString;
@@ -549,31 +566,23 @@ void sendFramework_srv(int nFunction, String dataMessage) {
     performSend(msgFin1, msgFin1.length());
     performSend(msgFin2, msgFin2.length());
   }
-  else if(nFunction == 3) {
+  else if(nFunction == 3) { // ESECUZIONE INVIO DOOR CHECK
     msgFinale = String("DOR_CHECK") + "-" + dataMessage;
     performSend(msgFinale, defaultLen);
   }
-  else if(nFunction == 4) {
-    msgFinale = String("TMP_CHECK") + "-" + dataMessage;
-    performSend(msgFinale, defaultLen);
-  }
-  else if(nFunction == 5) {
-    msgFinale = String("UMH_CHECK") + "-" + dataMessage;
-    performSend(msgFinale, defaultLen);
-  }
-  else if(nFunction == 6) {
+  else if(nFunction == 6) { // ESECUZIONE INVIO ALARM CHECK
     msgFinale = String("ALM_CHECK") + "-" + dataMessage;
     performSend(msgFinale, defaultLen);
   }
-  else if(nFunction == 7) {
+  else if(nFunction == 7) { // ESECUZIONE INVIO RST CHECK
     msgFinale = String("RST_CHECK") + "-" + "RST_OK";
     performSend(msgFinale, defaultLen);
   }
-  else if(nFunction == 8) {
+  else if(nFunction == 8) { // ESECUZIONE INVIO APRIRE MOTORE
     msgFinale = String("MOT_OPENC") + "-" + dataMessage;
     performSend(msgFinale, defaultLen);
   }
-  else {
+  else { // IN CASO DI FUNZIONE ERRATA
     Serial.println("Errore: E' stata richiesta una funzione non valida.");
   }
 }
@@ -585,7 +594,7 @@ void performSend(String dataToSend, int dataLen) {
   Wire.beginTransmission(8);
   Wire.write(byteData, sizeof(byteData));
   Wire.endTransmission();
-  Serial.print("Inviato Messaggio a REV2: ");
+  Serial.print("I2C - Inviato Messaggio allo Slave: ");
   Serial.println(dataToSend);
 }
 
@@ -618,8 +627,8 @@ boolean receiveFramework_srv(String function, String dataMessage) {
 }
 
 // ATTO DI RICEZIONE DAL REV2
+// RITORNA TRUE O FALSE IN BASE AL RITORNO DEL FRAMEWORK
 boolean receiveDataFromSlave(String func) {
-  // RITORNA TRUE O FALSE IN BASE AL RITORNO DEL FRAMEWORK
   Wire.requestFrom(8, 16);
   byte receivedData[16];
   int index = 0;
@@ -629,12 +638,12 @@ boolean receiveDataFromSlave(String func) {
   String receivedString = byteArrayToString(receivedData, sizeof(receivedData));
   String receivedFunction = extractField(receivedString, '-', 0);
   String receivedMessage = extractField(receivedString, '-', 1);
-  Serial.print("Ricevuto dallo Slave - Funzione: ");
+  Serial.print("I2C - Ricevuto dallo Slave: Funzione: ");
   Serial.print(receivedFunction);
   Serial.print("; Messaggio dallo Slave: ");
   Serial.print(receivedMessage);
   Serial.println(";");
-  if(strcmp(func.c_str(), "ADMIN") == 0) {
+  if(strcmp(func.c_str(), "ADMIN") == 0) { // DATO CHE ABBIAMO SOLO DUE FUNZIONI LE CHIAMO COSI'
     if(strcmp(receivedFunction.c_str(), "ADM_RESET") == 0) {
       return receiveFramework_srv(receivedFunction, receivedMessage);
     }
@@ -649,10 +658,10 @@ boolean receiveDataFromSlave(String func) {
   else return false;
 }
 
-
-//
-// FUNZIONI DI UTILITA'
-//
+/*
+LOGICA DEL PROGRAMMA FINITA
+FUNZIONI DI UTILITA'
+*/
 
 // RIEMPIE DI 0 UNA STRINGA PER FARLA ARRIVARE AD UNA LUNGHEZZA FISSATA
 void padZerosLeft(String &str, int fixedLength) {

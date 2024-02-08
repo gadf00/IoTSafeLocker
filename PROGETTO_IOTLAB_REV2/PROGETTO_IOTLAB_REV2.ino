@@ -1,10 +1,15 @@
+/*
+PROGRAMMA SLAVE I2C E PUBSUB SU MQTT 
+ARDUINO REV2
+*/
+
 #include <Wire.h>
 #include "Servo.h"
 #include <DHT.h>
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
 
-// DICHIARAZIONE DATI WiFi
+// DICHIARAZIONE DATI WiFi LabOfIoT
 char ssid[] = "WiFi-LabIoT";
 char pass[] = "s1jzsjkw5b";
 WiFiClient espClient;
@@ -12,9 +17,9 @@ WiFiClient espClient;
 // DICHIARAZIONE DATI MQTT
 const char* mqttServer = "192.168.1.21"; // SERVER LABORATORIO DI IoT 
 const int mqttPort = 1883; // PORTA STANDARD
-const char* mqttUser = ""; //LASCIARE VUOTO SE NON SERVE
-const char* mqttPassword = ""; //LASCIARE VUOTO SE NON SERVE
-PubSubClient client(espClient);
+const char* mqttUser = ""; // LASCIARE VUOTO SE NON SERVE
+const char* mqttPassword = ""; // LASCIARE VUOTO SE NON SERVE
+PubSubClient client(espClient); // DICHIARAZIONE CLIENT PUBSUB
 
 // DICHIARAZIONE SERVOMOTORE
 Servo doorServo;
@@ -35,17 +40,17 @@ String statoImp = "ATTESA";
 String statoPsw = "ATTESA";
 String statoDoor = "CHIUSA";
 String statoAlarm = "ALLARME SPENTO";
+String admResetState = "RST_NO";
 
 String prec_statoImp = "";
 String prec_statoPsw = "";
 String prec_statoDoor = "";
 String prec_statoAlarm = "";
-
 String controlPsw = "";
+
+// DICHIARAZIONE VARIABILI PER I2C
 String receivedFunction;
 String receivedMessage;
-
-String admResetState = "RST_NO";
 
 // SETUP DELL'ARDUINO
 void setup() {
@@ -131,36 +136,35 @@ void loop() {
   } else { // SE SENSORE NON DA ERRORE 
     inviaMQTT_NodeRed("secureBox_temperatura", String(temperature));
     inviaMQTT_NodeRed("secureBox_umidita", String(humidity));
-    if(statoImp != prec_statoImp) {
-      inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-      prec_statoImp = statoImp;
-    }
-    if(statoPsw != prec_statoPsw) {
-      inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-      prec_statoPsw = statoPsw;
-    }
-    if(statoDoor != prec_statoDoor) {
-      inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-      prec_statoDoor = statoDoor;
-    }
-    if(statoAlarm != prec_statoAlarm) {
-      inviaMQTT_NodeRed("secureBox_allarme", statoAlarm); 
-      prec_statoAlarm = statoAlarm;
-    }
   }
-  // Aggiungi la gestione della connessione MQTT qui
-  // connectToMQTT();
-  client.loop();  // Mantieni la connessione MQTT aperta
+  if(statoImp != prec_statoImp) {
+    inviaMQTT_NodeRed("secureBox_impronta", statoImp);
+    prec_statoImp = statoImp;
+  }
+  if(statoPsw != prec_statoPsw) {
+    inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
+    prec_statoPsw = statoPsw;
+  }
+  if(statoDoor != prec_statoDoor) {
+    inviaMQTT_NodeRed("secureBox_porta", statoDoor);
+    prec_statoDoor = statoDoor;
+  }
+  if(statoAlarm != prec_statoAlarm) {
+    inviaMQTT_NodeRed("secureBox_allarme", statoAlarm); 
+    prec_statoAlarm = statoAlarm;
+  }
+  client.loop(); // MANTIENI CONNESSIONE MQTT ATTIVA
   delay(1000);
 }
 
+// PUBBLICA SU NODERED
 void inviaMQTT_NodeRed(String mqttTopic, String value) {
   if (client.connected()) {
     client.publish(mqttTopic.c_str(), value.c_str());
     delay(250);
   } else {
     Serial.println("Connessione MQTT non attiva. Tentativo di riconnessione...");
-    connectToMQTT(); // Se la connessione non è attiva, prova a riconnetterti
+    connectToMQTT(); // SE LA CONNESSIONE E' CADUTA PROVA A RICONNETTERE
   }
 }
 
@@ -181,7 +185,6 @@ void receiveData(int byteCount) {
   Serial.print("Funzione: ");
   Serial.print(receivedFunction);
   Serial.print("   Msg: ");
-
   Serial.println(receivedMessage);
   if (dimensionePsw > 0) {
     dimensionePsw = 0;
@@ -229,16 +232,13 @@ void receiveFramework_slv(String funzione, String messaggio) {
   if(funzione.equals("IMP_CHECK")) {
     if(messaggio.equals("IMP_OK")) {
       statoImp = "RICONOSCIUTA";
-      //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
     else if (messaggio.equals("IMP_ER")) {
       statoImp = "NON RICONOSCIUTA";
-      //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
     }
   }
   if(funzione == "PSW_CHECK") {
     statoPsw = messaggio;
-    //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
   }
   if(funzione == "PSW_DIMEN") {
     dimensionePsw = messaggio.toInt();
@@ -246,22 +246,17 @@ void receiveFramework_slv(String funzione, String messaggio) {
   if(funzione == "DOR_CHECK") {
     if(messaggio == "DOR_OP") {
       statoDoor = "APERTA";
-      //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
     else if (messaggio == "DOR_CL") {
       statoDoor = "CHIUSA";
-      //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
     }
   }
   if(funzione == "ALM_CHECK") {
     if(messaggio == "ALM_ON") {
       statoAlarm = "ALLARME IN CORSO";
-      //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
-
     }
     if(messaggio == "ALM_OF") {
       statoAlarm = "ALLARME SPENTO";
-      //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
     }
   }
   if(funzione == "RST_CHECK") {
@@ -286,10 +281,6 @@ void resetSituation() {
   statoAlarm = "ALLARME SPENTO";
   admResetState = "RST_NO";
   pswState = "";
-  //inviaMQTT_NodeRed("secureBox_impronta", statoImp);
-  //inviaMQTT_NodeRed("secureBox_pswCheck", statoPsw);
-  //inviaMQTT_NodeRed("secureBox_porta", statoDoor);
-  //inviaMQTT_NodeRed("secureBox_allarme", statoAlarm);
 }
 
 void openMotor() {
@@ -302,27 +293,28 @@ void closeMotor() {
   Serial.println("MOTORE SU CHIUSO.");
 }
 
-// FUNZIONI DI ACCOMPAGNAMENTO E UTILITA'
+/* **********
+FINE DELLA LOGICA DEL PROGRAMMA
+ORA FUNZIONI DI UTILITA'
+********** */
 
-// Funzione per estrarre un campo da una stringa
+// FUNZIONE CHE ESTRAE UN CAMPO DA UNA STRINGA IN BASE AL SEGNO -
 String extractField(String input, char separator, int index) {
   int separatorCount = 0;
   int startIndex = 0;
   for (int i = 0; i <= input.length(); i++) {
     if (input[i] == separator || i == input.length()) {
       separatorCount++;
-
       if (separatorCount == index + 1) {
         return input.substring(startIndex, i);
       }
-
       startIndex = i + 1;
     }
   }
   return "";
 }
 
-// Funzione per convertire un array di byte in una String
+// CONVERSIONE ARRAY DI BYTE IN STRINGA
 String byteArrayToString(byte* array, int length) {
   String result = "";
   for (int i = 0; i < length; i++) {
@@ -331,7 +323,7 @@ String byteArrayToString(byte* array, int length) {
   return result;
 }
 
-// Funzione per convertire una String in un array di byte
+// CONVERSIONE STRINGA IN ARRAY DI BYTE
 void stringToByteArray(String input, byte* output, int maxLength) {
   for (int i = 0; i < maxLength && i < input.length(); i++) {
     output[i] = input.charAt(i);
