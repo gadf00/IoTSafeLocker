@@ -202,8 +202,10 @@ void sendData() {
   else if(strcmp(receivedFunction.c_str(), "ALM_CHECK") == 0) {
     if(strcmp(receivedMessage.c_str(), "ALM_ON") == 0) {
       response = String("ADM_RESET-") + String(admResetState);
-      admResetState = "RST_NO";
-      resetSituation();
+      if(strcmp(admResetState.c_str(), "RST_OK") == 0) {
+        admResetState = "RST_NO";
+        resetSituation();
+      }
     }
   }
   byte byteResponse[16];
