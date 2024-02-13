@@ -963,7 +963,7 @@ int findFirstAvailableID() {
   uint8_t id;
   // Scansiona tutti gli ID fino a trovare uno disponibile
   for (id = 1; id <= 127; id++) {
-    if (!finger.getTemplateCount()) { // Controlla se l'ID è disponibile
+    if (!finger.storeModel(id)) { // Prova a memorizzare un modello con l'ID attuale
       return id;
     }
   }
