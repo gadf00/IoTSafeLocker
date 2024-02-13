@@ -301,6 +301,8 @@ void loop() {
     sendFramework_srv(8, "MOT_OF");
     impOk = false;
     pswOk = false;
+    tentativiPsw = 5;
+    tentativiImp = 5;
     rstPressedbool = false;
     login = false;
     varControllo1 = false;
