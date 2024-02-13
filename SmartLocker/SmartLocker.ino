@@ -16,6 +16,7 @@ COLLEGATI:
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Fingerprint.h>
 #include <Keypad.h>
+#include <EEPROM.h>
 
 #define mySerial Serial1
 
@@ -58,6 +59,8 @@ bool adminReset_bool = false;
 bool varControllo1 = false;
 bool firstOn = true;
 
+int lastImpID = 0;
+
 // DICHIARAZIONE VARIABILI PER ATTACHINTERRUPT
 volatile bool rstPressedbool = false;
 volatile bool doorOpenedbool = false;
@@ -96,6 +99,14 @@ void setup() {
   // DICHIARAZIONE DEGLI INTERRUPT
   attachInterrupt(digitalPinToInterrupt(BTN_RED_PIN), rstPressed, FALLING);
   attachInterrupt(digitalPinToInterrupt(DOOR_PIN), doorStatusChanged, CHANGE);
+
+  // CARICA ULTIMO ID IMPRONTA DALLA EEPROM
+  lastImpID = EEPROM.read(0);
+  if (lastImpID < 1 || lastImpID > 127) {
+    EEPROM.write(0, 1);
+    lastImpID = 1;
+    Serial.println("EEPROM non inizializzata, scrivo 1");
+  }
 }
 
 // CATCH DEL PULSANTE RESET PREMUTO
@@ -403,18 +414,26 @@ void programmaNewImp() {
   lcd.setCursor(0,0);
   lcd.print("INSERIMENTO IMPRONTA");
   lcd.setCursor(0,1);
-  int id = findFirstAvailableID();
-  if (id == -1) { // SENSORE DI IMPRONTE PIENO RITORNA TRUE MA NON SI PUO' FARE NIENTE
+  if (lastImpID == 0) {
+    Serial.println("ERRORE, LETTURA VALORE DALLA EEPROM");
+    lcd.print("ERRORE:LETTURA EEPROM");
+    delay(1000);
+    return;
+  }
+  if (lastImpID >= 127) {
     Serial.println("ERRORE, SENSORE PIENO.");
     lcd.print("ERRORE:MEMORIA PIENA");
     delay(1000);
+    return;
   }
+  lastImpID = lastImpID + 1;
   Serial.print("ID IMPRONTA ASSEGNATO: ");
-  Serial.println(id);
+  Serial.println(lastImpID);
   lcd.print("ID ASSEGNATO: ");
-  lcd.print(id);
+  lcd.print(lastImpID);
   lcd.setCursor(0,2);
-  while(!getFingerprintEnroll(id) && !rstPressedbool);
+  while(!getFingerprintEnroll(lastImpID) && !rstPressedbool);
+  EEPROM.write(0, lastImpID);
 }
 
 // CHECK DELLA PASSWORD 
@@ -957,19 +976,4 @@ uint8_t getFingerprintEnroll(int id) {
     return p;
   }
   return true;
-}
-
-// LEGGI SLOT PER IMPRONTA DIGITALE DAL LETTORE DI IMPRONTE
-int findFirstAvailableID() {
-  int fid = -1; // ID disponibile
-  // Scansiona gli ID fino a 199 per trovare uno disponibile
-  for (size_t i = 1; i < 120; i++) {
-    uint8_t c = finger.loadModel(i); // Carica il modello per l'ID attuale
-    // Se non viene trovato un modello per l'ID attuale, significa che è disponibile
-    if (c != FINGERPRINT_OK) {
-      fid = i;
-      break; // Esci dal loop
-    }
-  }
-  return fid; // Restituisce l'ID disponibile o -1 se non ne è stato trovato uno
 }
