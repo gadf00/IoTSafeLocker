@@ -412,6 +412,7 @@ void programmaNewImp() {
   Serial.print("ID IMPRONTA ASSEGNATO: ");
   Serial.println(id);
   lcd.print("ID ASSEGNATO: ");
+  lcd.print(id);
   lcd.setCursor(0,2);
   while(!getFingerprintEnroll(id) && !rstPressedbool);
 }
