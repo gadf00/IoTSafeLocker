@@ -903,6 +903,7 @@ uint8_t getFingerprintEnroll(int id) {
   lcd.print("                    ");
   lcd.setCursor(0,3);
   lcd.print("                    ");
+  lcd.setCursor(0,2);
   Serial.print("CREAZIONE MODELLO PER ID: ");  Serial.println(id);
   p = finger.createModel();
   if (p == FINGERPRINT_OK) {
