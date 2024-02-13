@@ -961,14 +961,15 @@ uint8_t getFingerprintEnroll(int id) {
 
 // LEGGI SLOT PER IMPRONTA DIGITALE DAL LETTORE DI IMPRONTE
 int findFirstAvailableID() {
-  uint8_t id;
-  // Scansiona tutti gli ID fino a trovare uno disponibile
-  for (id = 1; id <= 127; id++) {
-    if (!finger.loadModel(id)) { // Controlla se esiste già un modello per l'ID attuale
-      return id;
+  int fid = -1; // ID disponibile
+  // Scansiona gli ID fino a 199 per trovare uno disponibile
+  for (size_t i = 1; i < 120; i++) {
+    uint8_t c = finger.loadModel(i); // Carica il modello per l'ID attuale
+    // Se non viene trovato un modello per l'ID attuale, significa che è disponibile
+    if (c != FINGERPRINT_OK) {
+      fid = i;
+      break; // Esci dal loop
     }
   }
-  // Se non ci sono ID disponibili, restituisce -1
-  return -1;
+  return fid; // Restituisce l'ID disponibile o -1 se non ne è stato trovato uno
 }
-
