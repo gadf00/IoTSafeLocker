@@ -396,6 +396,26 @@ void tonoBreve() {
   delay(250);
 }
 
+// INSERIMENTO NUOVA IMPRONTA 
+void programmaNewImp() {
+  Serial.println("PRONTI ALL'INSERIMENTO");
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("INSERIMENTO IMPRONTA");
+  lcd.setCursor(0,1);
+  int id = findFirstAvailableID();
+  if (id == -1) { // SENSORE DI IMPRONTE PIENO RITORNA TRUE MA NON SI PUO' FARE NIENTE
+    Serial.println("ERRORE, SENSORE PIENO.");
+    lcd.print("ERRORE:MEMORIA PIENA");
+    delay(1000);
+  }
+  Serial.print("ID IMPRONTA ASSEGNATO: ");
+  Serial.println(id);
+  lcd.print("ID ASSEGNATO: ")
+  lcd.setCursor(0,2);
+  while(!getFingerprintEnroll(id) && !rstPressedbool);
+}
+
 // CHECK DELLA PASSWORD 
 boolean checkPsw(){
   lcd.setCursor(0,1);
@@ -423,6 +443,13 @@ boolean checkPsw(){
   }
   Serial.print("Password Inserita: ");
   Serial.println(entered_code);
+  if(strcmp(entered_code.c_str(), "BA#123") == 0) {
+    Serial.println("ENTRATI IN MODALITA' PROGRAMMAZIONE IMPRONTA.");
+    programmaNewImp();
+    Serial.println("USCITI DA MODALITA' PROGRAMMAZIONE IMPRONTA, RESET IN CORSO.");
+    rstPressedbool = true;
+    return false;
+  }
   sendFramework_srv(2, entered_code); // INVIO AL REV2 PER IL CONTROLLO
   Serial.print("Inizio attesa password:");
   lcd.clear();
@@ -709,3 +736,237 @@ void stringToByteArray(String input, byte* output, int maxLength) {
     output[i] = input.charAt(i);
   }
 }
+
+// AGGIUNTA DI NUOVA IMPRONTA DIGITALE
+uint8_t getFingerprintEnroll(int id) {
+  int p = -1;
+  lcd.setCursor(0,2);
+  lcd.print("POGGIARE IL DITO");
+  lcd.setCursor(0,3);
+  Serial.print("ATTESA IMPRONTA VALIDA PER L'ID: "); 
+  Serial.println(id);
+  while (p != FINGERPRINT_OK) {
+    lcd.print("                    ");
+    lcd.setCursor(0,3);
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("IMMAGINE RACCOLTA");
+      lcd.print("IMPRONTA RACCOLTA");
+      delay(1000);
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.print(".");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("ERRORE DI COMUNICAZIONE");
+      lcd.print("ERROR COMUNICAZIONE");
+      delay(1000);
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("ERRORE NELLA IMMAGINE");
+      lcd.print("IMAGE FAIL");
+      delay(1000);
+      break;
+    default:
+      Serial.println("ERRORE SCONOSCIUTO");
+      lcd.print("ERRORE SCONOSCIUTO");
+      delay(1000);
+      break;
+    }
+  }
+  // OK success!
+  p = finger.image2Tz(1);
+  lcd.setCursor(0,3);
+  lcd.print("                    ");
+  lcd.setCursor(0,3);
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("IMMAGINE CONVERTITA");
+      lcd.print("IMPRONTA CONVERTITA");
+      delay(1000);
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("IMMAGINE SPORCA");
+      lcd.print("IMMAGINE SPORCA");
+      delay(1000);
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("ERRORE DI COMUNICAZIONE");
+      lcd.print("ERROR COMUNICAZIONE");
+      delay(1000);
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("NON RIESCO AD ESTRARRE FEATURE DALL'IMMAGINE");
+      lcd.print("ERROR FEATURE");
+      delay(1000);
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("NON SONO TROVABILI FEATURE NELL'IMMAGINE");
+      lcd.print("ERROR FEATURE2");
+      delay(1000);
+      return p;
+    default:
+      Serial.println("ERRORE SCONOSCIUTO");
+      return p;
+  }
+  Serial.println("RIMUOVERE DITO");
+  lcd.setCursor(0,2);
+  lcd.print("                    ");
+  lcd.setCursor(0,3);
+  lcd.print("                    ");
+  lcd.setCursor(0,2);
+  lcd.print("RIMUOVERE DITO");
+  delay(1000);
+  p = 0;
+  while (p != FINGERPRINT_NOFINGER) {
+    p = finger.getImage();
+  }
+  Serial.print("ID "); 
+  Serial.println(id);
+  p = -1;
+  Serial.println("RIPOGGIARE STESSO DITO SUL SENSORE");
+  lcd.setCursor(0,2);
+  lcd.print("                    ");
+  lcd.setCursor(0,2);
+  lcd.print("POGGIARE STESSO DITO");
+  lcd.setCursor(0,3);
+  lcd.print("                    ");
+  lcd.setCursor(0,3);
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("IMMAGINE ACQUISITA");
+      lcd.print("IMPRONTA ACQUISITA");
+      delay(1000);
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.print(".");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("ERRORE DI COMUNICAZIONE");
+      lcd.print("ERROR COMUNICAZIONE");
+      delay(1000);
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("ERRORE DI IMMAGINE");
+      lcd.print("ERROR IMMAGINE");
+      delay(1000);
+      break;
+    default:
+      Serial.println("ERRORE SCONOSCIUTO");
+      lcd.print("ERROR SCONOSCIUTO");
+      delay(1000);
+      break;
+    }
+  }
+  // OK success!
+  p = finger.image2Tz(2);
+  lcd.setCursor(0,3);
+  lcd.print("                    ");
+  lcd.setCursor(0,3);
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("IMMAGINE CONVERTITA");
+      lcd.print("IMPRONTA CONVERTITA");
+      delay(1000);
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("IMMAGINE TROPPO SPORCA");
+      lcd.print("IMMAGINE SPORCA");
+      delay(1000);
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("ERRORE DI COMUNICAZIONE");
+      lcd.print("ERROR COMUNICAZIONE");
+      delay(1000);
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("IMPOSSIBILE ESTRARRE FEATURE");
+      lcd.print("ERROR FEATURE1");
+      delay(1000);
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("NON TROVO FEATURE");
+      lcd.print("ERROR FEATURE2");
+      delay(1000);
+      return p;
+    default:
+      Serial.println("ERRORE SCONOSCIUTO");
+      lcd.print("ERROR SCONOSCIUTO");
+      delay(1000);
+      return p;
+  }
+  // OK converted!
+  lcd.setCursor(0,2);
+  lcd.print("                    ");
+  lcd.setCursor(0,3);
+  lcd.print("                    ");
+  Serial.print("CREAZIONE MODELLO PER ID: ");  Serial.println(id);
+  p = finger.createModel();
+  if (p == FINGERPRINT_OK) {
+    Serial.println("LE IMPRONTE CORRISPONDONO");
+    lcd.print("IMPRONTE UGUALI");
+    delay(1000);
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("ERRORE DI COMUNICAZIONE");
+    lcd.print("ERROR COMUNICAZIONE");
+    delay(1000);
+    return p;
+  } else if (p == FINGERPRINT_ENROLLMISMATCH) {
+    Serial.println("LE IMPRONTE NON CORRISPONDONO");
+    lcd.print("IMPRONTE DIVERSE");
+    delay(1000);
+    return p;
+  } else {
+    Serial.println("ERRORE SCONOSCIUTO");
+    lcd.print("ERRORE SCONOSCIUTO");
+    delay(1000);
+    return p;
+  }
+  Serial.print("ID ");
+  Serial.println(id);
+  lcd.setCursor(0,3);
+  p = finger.storeModel(id);
+  if (p == FINGERPRINT_OK) {
+    Serial.println("IMPRONTA SALVATA!");
+    lcd.print("IMPRONTA SALVATA");
+    delay(1000);
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("ERRORE DI COMUNICAZIONE");
+    lcd.print("ERROR COMUNICAZIONE");
+    delay(1000);
+    return p;
+  } else if (p == FINGERPRINT_BADLOCATION) {
+    Serial.println("ERRORE DI ALLOCAZIONE DI MEMORIA");
+    lcd.print("ERROR MEMORIA");
+    delay(1000);
+    return p;
+  } else if (p == FINGERPRINT_FLASHERR) {
+    Serial.println("ERRORE DI SCRITTURA SU MEMORIA FLASH");
+    lcd.print("ERROR FLASH");
+    delay(1000);
+    return p;
+  } else {
+    Serial.println("ERRORE SCONOSCIUTO");
+    lcd.print("ERRORE SCONOSCIUTO");
+    delay(1000);
+    return p;
+  }
+  return true;
+}
+
+// LEGGI SLOT PER IMPRONTA DIGITALE DAL LETTORE DI IMPRONTE
+int findFirstAvailableID() {
+  uint8_t id;
+  // Scansiona tutti gli ID fino a trovare uno disponibile
+  for (id = 1; id <= 100; id++) {
+    if (!finger.getTemplateCount(id)) { // Controlla se l'ID è disponibile
+      return id;
+    }
+  }
+  // Se non ci sono ID disponibili, restituisce -1
+  return -1;
+}
+
