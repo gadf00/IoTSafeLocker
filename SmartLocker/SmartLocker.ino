@@ -961,8 +961,8 @@ uint8_t getFingerprintEnroll(int id) {
 int findFirstAvailableID() {
   uint8_t id;
   // Scansiona tutti gli ID fino a trovare uno disponibile
-  for (id = 1; id <= 100; id++) {
-    if (!finger.getTemplateCount(id)) { // Controlla se l'ID è disponibile
+  for (id = 1; id <= 127; id++) {
+    if (!finger.getTemplateCount()) { // Controlla se l'ID è disponibile
       return id;
     }
   }
